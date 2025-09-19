@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Palette, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 export function Login() {
   const { signIn, signUp } = useAuth();

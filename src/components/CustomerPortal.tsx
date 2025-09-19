@@ -7,7 +7,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Download, FileText, Search, Calendar, DollarSign } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface Invoice {
   id: string;
