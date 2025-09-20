@@ -35,10 +35,10 @@
     "clsx": "*",
     "cmdk": "^1.1.1",
     "embla-carousel-react": "^8.6.0",
+    "hono": "^4.0.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.487.0",
     "next-themes": "^0.4.6",
-    "hono": "^4.0.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -50,6 +50,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^20.10.0",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "vite": "6.3.5"
