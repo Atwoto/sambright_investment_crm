@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
 const supabase = createClient(
@@ -29,6 +29,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to convert Supabase user to our User type
+function convertSupabaseUser(supabaseUser: SupabaseUser | null): User | null {
+  if (!supabaseUser) return null;
+  
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email || '',
+    name: supabaseUser.user_metadata?.name || '',
+    role: supabaseUser.user_metadata?.role || 'client'
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,30 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || '',
-          role: session.user.user_metadata?.role || 'client'
-        });
-      }
+      setUser(convertSupabaseUser(session?.user || null));
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-            role: session.user.user_metadata?.role || 'client'
-          });
-        } else {
-          setUser(null);
-        }
+        setUser(convertSupabaseUser(session?.user || null));
         setLoading(false);
       }
     );
@@ -86,20 +82,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string, role: UserRole = 'client') => {
     try {
-      // Call the server endpoint to create user
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a4a212c7/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${publicAnonKey}`,
-        },
-        body: JSON.stringify({ email, password, name, role }),
+      // Use Supabase's built-in sign up method
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role
+          }
+        }
       });
 
-      const result = await response.json();
+      if (error) {
+        return { success: false, error: error.message };
+      }
 
-      if (!response.ok) {
-        return { success: false, error: result.error || 'Failed to create account' };
+      // If sign up is successful, set the user state
+      if (data.user) {
+        setUser(convertSupabaseUser(data.user));
       }
 
       return { success: true };
