@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -12,7 +13,8 @@ import {
   TrendingUp,
   Palette,
   Brush,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -45,18 +47,138 @@ export function DashboardOverview() {
 
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setTimeout(() => {
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch products count
+      const { count: productsCount, error: productsError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true });
+      
+      if (productsError) throw productsError;
+      
+      // Fetch clients count
+      const { count: clientsCount, error: clientsError } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+      
+      if (clientsError) throw clientsError;
+      
+      // Fetch orders count
+      const { count: ordersCount, error: ordersError } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true });
+      
+      if (ordersError) throw ordersError;
+      
+      // Fetch paintings count
+      const { count: paintingsCount, error: paintingsError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('product_type', 'painting');
+      
+      if (paintingsError) throw paintingsError;
+      
+      // Fetch paints count
+      const { count: paintsCount, error: paintsError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('product_type', 'paint');
+      
+      if (paintsError) throw paintsError;
+      
+      // Fetch low stock items (products with stock_level < min_stock_level)
+      const { data: lowStockItems, error: lowStockError } = await supabase
+        .from('products')
+        .select('id')
+        .lt('stock_level', 'min_stock_level')
+        .limit(10);
+      
+      if (lowStockError) throw lowStockError;
+      
+      // For revenue, we'll need to calculate from orders
+      // This is a simplified calculation - you might want to adjust based on your business logic
+      const { data: ordersData, error: ordersDataError } = await supabase
+        .from('orders')
+        .select('total')
+        .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+      
+      if (ordersDataError) throw ordersDataError;
+      
+      const monthlyRevenue = ordersData.reduce((sum, order) => sum + (order.total || 0), 0);
+      
+      // Fetch recent inventory transactions for activity feed
+      const { data: recentTransactions, error: transactionsError } = await supabase
+        .from('inventory_transactions')
+        .select('*, product:products(name, product_type)')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (transactionsError) throw transactionsError;
+      
+      // Convert transactions to activity feed items
+      const recentActivity = recentTransactions.map((transaction, index) => {
+        let message = '';
+        let type = 'restock';
+        
+        switch (transaction.type) {
+          case 'stock_in':
+            message = `Stocked in ${transaction.quantity} units of ${transaction.product?.name || transaction.product_name}`;
+            type = 'restock';
+            break;
+          case 'stock_out':
+            message = `Sold ${transaction.quantity} units of ${transaction.product?.name || transaction.product_name}`;
+            type = 'sale';
+            break;
+          case 'damaged':
+            message = `${transaction.quantity} units of ${transaction.product?.name || transaction.product_name} marked as damaged`;
+            type = 'low_stock';
+            break;
+          case 'adjustment':
+            message = `Inventory adjusted for ${transaction.product?.name || transaction.product_name} (${transaction.quantity > 0 ? '+' : ''}${transaction.quantity})`;
+            type = 'restock';
+            break;
+          default:
+            message = `${transaction.type} transaction for ${transaction.product?.name || transaction.product_name}`;
+            type = 'restock';
+        }
+        
+        // Calculate time ago
+        const createdAt = new Date(transaction.created_at);
+        const now = new Date();
+        const diffMs = now.getTime() - createdAt.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        
+        let timestamp = '';
+        if (diffDays > 0) {
+          timestamp = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        } else if (diffHours > 0) {
+          timestamp = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        } else {
+          timestamp = `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+        }
+        
+        return {
+          id: transaction.id,
+          type,
+          message,
+          timestamp
+        };
+      });
+      
+      // Set the dashboard stats
       setStats({
-        totalProducts: 156,
-        totalClients: 89,
-        pendingOrders: 12,
-        monthlyRevenue: 24680,
-        lowStockItems: 8,
-        paintingsAvailable: 47,
-        paintsInStock: 109,
-        recentActivity: [
+        totalProducts: productsCount || 0,
+        totalClients: clientsCount || 0,
+        pendingOrders: ordersCount || 0,
+        monthlyRevenue: monthlyRevenue,
+        lowStockItems: lowStockItems?.length || 0,
+        paintingsAvailable: paintingsCount || 0,
+        paintsInStock: paintsCount || 0,
+        recentActivity: recentActivity.length > 0 ? recentActivity : [
           {
             id: '1',
             type: 'sale',
@@ -83,8 +205,62 @@ export function DashboardOverview() {
           }
         ]
       });
+      
       setLoading(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Fallback to mock data on error
+      setTimeout(() => {
+        setStats({
+          totalProducts: 156,
+          totalClients: 89,
+          pendingOrders: 12,
+          monthlyRevenue: 24680,
+          lowStockItems: 8,
+          paintingsAvailable: 47,
+          paintsInStock: 109,
+          recentActivity: [
+            {
+              id: '1',
+              type: 'sale',
+              message: 'Sold "Sunset Landscape" to Gallery Aurora for $850',
+              timestamp: '2 hours ago'
+            },
+            {
+              id: '2',
+              type: 'low_stock',
+              message: 'Titanium White 500ml running low (3 units left)',
+              timestamp: '4 hours ago'
+            },
+            {
+              id: '3',
+              type: 'new_client',
+              message: 'New client: Modern Interiors Design Studio',
+              timestamp: '1 day ago'
+            },
+            {
+              id: '4',
+              type: 'restock',
+              message: 'Restocked Winsor & Newton watercolors (24 units)',
+              timestamp: '2 days ago'
+            }
+          ]
+        });
+        setLoading(false);
+      }, 1000);
+    }
+  };
+
+  const refreshDashboard = async () => {
+    try {
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
   }, []);
 
   const getActivityIcon = (type: string) => {
@@ -114,9 +290,15 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-900">Dashboard Overview</h2>
-        <p className="text-gray-600">Welcome back! Here's what's happening in your painting business.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Dashboard Overview</h2>
+          <p className="text-gray-600">Welcome back! Here's what's happening in your painting business.</p>
+        </div>
+        <Button onClick={refreshDashboard} variant="outline" size="sm" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Refreshing...' : 'Refresh Data'}
+        </Button>
       </div>
 
       {/* Key Metrics */}

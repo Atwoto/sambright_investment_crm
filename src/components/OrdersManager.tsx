@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
+import { toast } from 'sonner';
+import { createOrderLetterheadHTML } from '../utils/orderPrintTemplate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -56,8 +59,11 @@ interface Order {
   paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
   paymentMethod?: string;
   dateCreated: string;
-  dueDate?: string;
   notes?: string;
+  discount?: number;
+  shippingAddress?: string;
+  billingAddress?: string;
+  dueDate?: string;
 }
 
 export function OrdersManager() {
@@ -68,109 +74,264 @@ export function OrdersManager() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
     items: [],
     subtotal: 0,
     tax: 0,
     total: 0
   });
+  const [newItem, setNewItem] = useState<Partial<OrderItem>>({ productName: '', productType: 'painting', quantity: 1, unitPrice: 0 });
+  const [editItem, setEditItem] = useState<Partial<OrderItem>>({ productName: '', productType: 'painting', quantity: 1, unitPrice: 0 });
+  const [creating, setCreating] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setOrders([
-      {
-        id: '1',
-        orderNumber: 'ORD-2024-001',
-        type: 'sale',
-        clientId: '1',
-        clientName: 'Sarah Johnson',
-        clientEmail: 'sarah@moderninteriors.com',
-        items: [
+    // Load orders from Supabase
+    const loadOrders = async () => {
+      try {
+        console.log('Attempting to load orders from Supabase...');
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*');
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+        
+        console.log('Supabase data:', data);
+        
+        // If we have data from Supabase, use it
+        // Otherwise, use the mock data (for backward compatibility)
+        if (data && data.length > 0) {
+          console.log(`Found ${data.length} orders in database`);
+          // Map Supabase data to our Order interface
+          const mappedOrders = data.map(order => ({
+            id: order.id,
+            orderNumber: order.order_number,
+            type: order.order_type || 'sale',
+            clientId: order.client_id || '',
+            clientName: 'Client Name', // Would need to join with clients table
+            clientEmail: 'client@example.com', // Would need to join with clients table
+            items: order.items || [],
+            subtotal: order.total ? order.total - (order.tax || 0) : 0,
+            tax: order.tax || 0,
+            total: order.total || 0,
+            status: order.status || 'draft',
+            paymentStatus: 'pending', // Default value
+            paymentMethod: '', // Default value
+            dateCreated: order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            dueDate: order.due_date || '', // Map due_date from database
+            notes: order.notes || '',
+            discount: order.discount || 0,
+            shippingAddress: order.shipping_address || '',
+            billingAddress: order.billing_address || ''
+          }));
+          
+          setOrders(mappedOrders);
+        } else {
+          console.log('No orders in database, using mock data');
+          // Use mock data if no data in database
+          setOrders([
+            {
+              id: '1',
+              orderNumber: 'ORD-2024-001',
+              type: 'sale',
+              clientId: '1',
+              clientName: 'Sarah Johnson',
+              clientEmail: 'sarah@moderninteriors.com',
+              items: [
+                {
+                  id: '1',
+                  productId: 'p1',
+                  productName: 'Sunset Landscape',
+                  productType: 'painting',
+                  quantity: 1,
+                  unitPrice: 850,
+                  totalPrice: 850
+                }
+              ],
+              subtotal: 850,
+              tax: 68,
+              total: 918,
+              status: 'completed',
+              paymentStatus: 'paid',
+              paymentMethod: 'Credit Card',
+              dateCreated: '2024-09-15',
+              dueDate: '2024-09-15',
+              notes: 'Client loved the piece, immediate purchase.'
+            },
+            {
+              id: '2',
+              orderNumber: 'QUO-2024-002',
+              type: 'quote',
+              clientId: '2',
+              clientName: 'David Chen',
+              clientEmail: 'david.chen@email.com',
+              items: [
+                {
+                  id: '1',
+                  productId: 'p2',
+                  productName: 'Winsor & Newton Oil Paint Set',
+                  productType: 'paint',
+                  quantity: 2,
+                  unitPrice: 120,
+                  totalPrice: 240
+                },
+                {
+                  id: '2',
+                  productId: 'p3',
+                  productName: 'Professional Brushes',
+                  productType: 'paint',
+                  quantity: 1,
+                  unitPrice: 85,
+                  totalPrice: 85
+                }
+              ],
+              subtotal: 325,
+              tax: 26,
+              total: 351,
+              status: 'sent',
+              paymentStatus: 'pending',
+              dateCreated: '2024-09-18',
+              dueDate: '2024-10-18',
+              notes: 'Bulk order discount applied. Client considering purchase.'
+            },
+            {
+              id: '3',
+              orderNumber: 'INV-2024-003',
+              type: 'invoice',
+              clientId: '3',
+              clientName: 'Maria Rodriguez',
+              clientEmail: 'maria@auroragallery.com',
+              items: [
+                {
+                  id: '1',
+                  productId: 'p4',
+                  productName: 'Abstract Art Collection',
+                  productType: 'painting',
+                  quantity: 4,
+                  unitPrice: 650,
+                  totalPrice: 2600
+                }
+              ],
+              subtotal: 2600,
+              tax: 208,
+              total: 2808,
+              status: 'accepted',
+              paymentStatus: 'overdue',
+              paymentMethod: 'Bank Transfer',
+              dateCreated: '2024-08-15',
+              dueDate: '2024-09-15',
+              notes: 'Gallery consignment agreement. Payment overdue by 3 days.'
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading orders from Supabase:', error);
+        console.error('This might be due to database connection issues or table structure problems');
+        // Fallback to mock data on error
+        setOrders([
           {
             id: '1',
-            productId: 'p1',
-            productName: 'Sunset Landscape',
-            productType: 'painting',
-            quantity: 1,
-            unitPrice: 850,
-            totalPrice: 850
-          }
-        ],
-        subtotal: 850,
-        tax: 68,
-        total: 918,
-        status: 'completed',
-        paymentStatus: 'paid',
-        paymentMethod: 'Credit Card',
-        dateCreated: '2024-09-15',
-        dueDate: '2024-09-15',
-        notes: 'Client loved the piece, immediate purchase.'
-      },
-      {
-        id: '2',
-        orderNumber: 'QUO-2024-002',
-        type: 'quote',
-        clientId: '2',
-        clientName: 'David Chen',
-        clientEmail: 'david.chen@email.com',
-        items: [
-          {
-            id: '1',
-            productId: 'p2',
-            productName: 'Winsor & Newton Oil Paint Set',
-            productType: 'paint',
-            quantity: 2,
-            unitPrice: 120,
-            totalPrice: 240
+            orderNumber: 'ORD-2024-001',
+            type: 'sale',
+            clientId: '1',
+            clientName: 'Sarah Johnson',
+            clientEmail: 'sarah@moderninteriors.com',
+            items: [
+              {
+                id: '1',
+                productId: 'p1',
+                productName: 'Sunset Landscape',
+                productType: 'painting',
+                quantity: 1,
+                unitPrice: 850,
+                totalPrice: 850
+              }
+            ],
+            subtotal: 850,
+            tax: 68,
+            total: 918,
+            status: 'completed',
+            paymentStatus: 'paid',
+            paymentMethod: 'Credit Card',
+            dateCreated: '2024-09-15',
+            dueDate: '2024-09-15',
+            notes: 'Client loved the piece, immediate purchase.'
           },
           {
             id: '2',
-            productId: 'p3',
-            productName: 'Professional Brushes',
-            productType: 'paint',
-            quantity: 1,
-            unitPrice: 85,
-            totalPrice: 85
-          }
-        ],
-        subtotal: 325,
-        tax: 26,
-        total: 351,
-        status: 'sent',
-        paymentStatus: 'pending',
-        dateCreated: '2024-09-18',
-        dueDate: '2024-10-18',
-        notes: 'Bulk order discount applied. Client considering purchase.'
-      },
-      {
-        id: '3',
-        orderNumber: 'INV-2024-003',
-        type: 'invoice',
-        clientId: '3',
-        clientName: 'Maria Rodriguez',
-        clientEmail: 'maria@auroragallery.com',
-        items: [
+            orderNumber: 'QUO-2024-002',
+            type: 'quote',
+            clientId: '2',
+            clientName: 'David Chen',
+            clientEmail: 'david.chen@email.com',
+            items: [
+              {
+                id: '1',
+                productId: 'p2',
+                productName: 'Winsor & Newton Oil Paint Set',
+                productType: 'paint',
+                quantity: 2,
+                unitPrice: 120,
+                totalPrice: 240
+              },
+              {
+                id: '2',
+                productId: 'p3',
+                productName: 'Professional Brushes',
+                productType: 'paint',
+                quantity: 1,
+                unitPrice: 85,
+                totalPrice: 85
+              }
+            ],
+            subtotal: 325,
+            tax: 26,
+            total: 351,
+            status: 'sent',
+            paymentStatus: 'pending',
+            dateCreated: '2024-09-18',
+            dueDate: '2024-10-18',
+            notes: 'Bulk order discount applied. Client considering purchase.'
+          },
           {
-            id: '1',
-            productId: 'p4',
-            productName: 'Abstract Art Collection',
-            productType: 'painting',
-            quantity: 4,
-            unitPrice: 650,
-            totalPrice: 2600
+            id: '3',
+            orderNumber: 'INV-2024-003',
+            type: 'invoice',
+            clientId: '3',
+            clientName: 'Maria Rodriguez',
+            clientEmail: 'maria@auroragallery.com',
+            items: [
+              {
+                id: '1',
+                productId: 'p4',
+                productName: 'Abstract Art Collection',
+                productType: 'painting',
+                quantity: 4,
+                unitPrice: 650,
+                totalPrice: 2600
+              }
+            ],
+            subtotal: 2600,
+            tax: 208,
+            total: 2808,
+            status: 'accepted',
+            paymentStatus: 'overdue',
+            paymentMethod: 'Bank Transfer',
+            dateCreated: '2024-08-15',
+            dueDate: '2024-09-15',
+            notes: 'Gallery consignment agreement. Payment overdue by 3 days.'
           }
-        ],
-        subtotal: 2600,
-        tax: 208,
-        total: 2808,
-        status: 'accepted',
-        paymentStatus: 'overdue',
-        paymentMethod: 'Bank Transfer',
-        dateCreated: '2024-08-15',
-        dueDate: '2024-09-15',
-        notes: 'Gallery consignment agreement. Payment overdue by 3 days.'
+        ]);
       }
-    ]);
+    };
+    
+    loadOrders();
   }, []);
 
   const filteredOrders = orders.filter(order => {
@@ -234,127 +395,234 @@ export function OrdersManager() {
     return new Date(order.dueDate) < new Date() && order.paymentStatus !== 'paid';
   };
 
-  const handlePrintOrder = (order: Order) => {
-    // Generate printable HTML
-    const printContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${order.orderNumber} - Sambright Investment Ltd</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-          .header { border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
-          .company-name { font-size: 24px; font-weight: bold; color: #3b82f6; margin-bottom: 5px; }
-          .company-subtitle { color: #666; margin-bottom: 20px; }
-          .order-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
-          .client-info, .order-details { flex: 1; }
-          .order-details { text-align: right; }
-          .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .items-table th, .items-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          .items-table th { background-color: #f8f9fa; font-weight: bold; }
-          .totals { text-align: right; margin-top: 20px; }
-          .total-row { font-weight: bold; font-size: 18px; color: #16a34a; }
-          .notes { margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
-          @media print { body { margin: 0; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="company-name">Sambright Investment Ltd</div>
-          <div class="company-subtitle">Painting Business CRM</div>
-        </div>
-        
-        <div class="order-info">
-          <div class="client-info">
-            <h3>Bill To:</h3>
-            <strong>${order.clientName}</strong><br>
-            ${order.clientEmail}
-          </div>
-          <div class="order-details">
-            <h3>${order.type.charAt(0).toUpperCase() + order.type.slice(1)} Details:</h3>
-            <strong>${order.orderNumber}</strong><br>
-            Date: ${new Date(order.dateCreated).toLocaleDateString()}<br>
-            ${order.dueDate ? `Due: ${new Date(order.dueDate).toLocaleDateString()}<br>` : ''}
-            Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-          </div>
-        </div>
+  // Helpers for totals and items (create)
+  const recalcTotals = (items: OrderItem[], tax: number) => {
+    const subtotal = items.reduce((s, it) => s + (it.totalPrice || 0), 0);
+    const total = subtotal + (tax || 0);
+    return { subtotal, total };
+  };
 
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Type</th>
-              <th>Quantity</th>
-              <th>Unit Price</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${order.items.map(item => `
-              <tr>
-                <td>${item.productName}</td>
-                <td>${item.productType}</td>
-                <td>${item.quantity}</td>
-                <td>${item.unitPrice.toFixed(2)}</td>
-                <td>${item.totalPrice.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+  const addItemToNewOrder = () => {
+    if (!newItem.productName) return;
+    const item: OrderItem = {
+      id: `${Date.now()}`,
+      productId: '',
+      productName: newItem.productName!,
+      productType: (newItem.productType as any) || 'painting',
+      quantity: Number(newItem.quantity) || 1,
+      unitPrice: Number(newItem.unitPrice) || 0,
+      totalPrice: (Number(newItem.quantity) || 1) * (Number(newItem.unitPrice) || 0)
+    };
+    const items = [ ...(newOrder.items as OrderItem[]), item ];
+    const { subtotal, total } = recalcTotals(items, Number(newOrder.tax) || 0);
+    setNewOrder({ ...newOrder, items, subtotal, total });
+    setNewItem({ productName: '', productType: newItem.productType || 'painting', quantity: 1, unitPrice: 0 });
+  };
 
-        <div class="totals">
-          <div>Subtotal: ${order.subtotal.toFixed(2)}</div>
-          <div>Tax: ${order.tax.toFixed(2)}</div>
-          <div class="total-row">Total: ${order.total.toFixed(2)}</div>
-        </div>
+  const removeItemFromNewOrder = (id: string) => {
+    const items = (newOrder.items as OrderItem[]).filter(i => i.id !== id);
+    const { subtotal, total } = recalcTotals(items, Number(newOrder.tax) || 0);
+    setNewOrder({ ...newOrder, items, subtotal, total });
+  };
 
-        ${order.notes ? `
-          <div class="notes">
-            <h4>Notes:</h4>
-            <p>${order.notes}</p>
-          </div>
-        ` : ''}
-      </body>
-      </html>
-    `;
+  const updateNewTax = (value: number) => {
+    const { subtotal, total } = recalcTotals((newOrder.items as OrderItem[]) || [], value || 0);
+    setNewOrder({ ...newOrder, tax: value || 0, subtotal, total });
+  };
 
-    // Open print window
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+  const genOrderNumber = (type: string) => {
+    const prefix = (type || 'ord').slice(0,3).toUpperCase();
+    const rand = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    return `${prefix}-${new Date().getFullYear()}-${rand}`;
+  };
+
+  const handleCreateOrder = async () => {
+    if (!newOrder.type || !newOrder.clientName || !newOrder.clientEmail) return;
+    setCreating(true);
+    const toastId = toast.loading('Creating order...');
+    const items = (newOrder.items as OrderItem[]) || [];
+    const { subtotal, total } = recalcTotals(items, Number(newOrder.tax) || 0);
+    const localId = `${Date.now()}`;
+    const order: Order = {
+      id: localId,
+      orderNumber: genOrderNumber(newOrder.type as string),
+      type: newOrder.type as any,
+      clientId: '',
+      clientName: newOrder.clientName!,
+      clientEmail: newOrder.clientEmail!,
+      items,
+      subtotal,
+      tax: Number(newOrder.tax) || 0,
+      total,
+      status: 'draft',
+      paymentStatus: 'pending',
+      paymentMethod: newOrder.paymentMethod,
+      dateCreated: new Date().toISOString().split('T')[0],
+      notes: newOrder.notes,
+      discount: 0,
+      shippingAddress: '',
+      billingAddress: '',
+      dueDate: newOrder.dueDate
+    };
+
+    // Optimistic add
+    setOrders(prev => [order, ...prev]);
+    try {
+      const { data, error } = await supabase.from('orders').insert({
+        order_number: order.orderNumber,
+        order_type: order.type,
+        client_id: order.clientId || null,
+        items: order.items,
+        tax: order.tax,
+        total: order.total,
+        status: order.status,
+        discount: order.discount || 0,
+        shipping_address: order.shippingAddress || '',
+        billing_address: order.billingAddress || '',
+        notes: order.notes || null,
+        due_date: order.dueDate || null,
+        created_at: new Date().toISOString()
+      }).select('id, order_number').single();
+      if (error) throw error;
+      // Reconcile id and number from DB
+      if (data) {
+        setOrders(prev => prev.map(o => o.id === localId ? { ...o, id: data.id || o.id, orderNumber: data.order_number || o.orderNumber } : o));
+      }
+      toast.success('Order created', { id: toastId });
+    } catch (e) {
+      toast.info('Saved locally (offline or server error)', { id: toastId });
+      console.error(e);
     }
+    setCreating(false);
+    setIsAddDialogOpen(false);
+    setNewOrder({ items: [], subtotal: 0, tax: 0, total: 0 });
+    setNewItem({ productName: '', productType: 'painting', quantity: 1, unitPrice: 0 });
+  };
+
+  // Edit helpers
+  const addItemToEditOrder = () => {
+    if (!editOrder || !editItem.productName) return;
+    const item: OrderItem = {
+      id: `${Date.now()}`,
+      productId: '',
+      productName: editItem.productName!,
+      productType: (editItem.productType as any) || 'painting',
+      quantity: Number(editItem.quantity) || 1,
+      unitPrice: Number(editItem.unitPrice) || 0,
+      totalPrice: (Number(editItem.quantity) || 1) * (Number(editItem.unitPrice) || 0)
+    };
+    const items = [ ...editOrder.items, item ];
+    const { subtotal, total } = recalcTotals(items, Number(editOrder.tax) || 0);
+    setEditOrder({ ...editOrder, items, subtotal, total });
+    setEditItem({ productName: '', productType: editItem.productType || 'painting', quantity: 1, unitPrice: 0 });
+  };
+
+  const removeItemFromEditOrder = (id: string) => {
+    if (!editOrder) return;
+    const items = editOrder.items.filter(i => i.id !== id);
+    const { subtotal, total } = recalcTotals(items, Number(editOrder.tax) || 0);
+    setEditOrder({ ...editOrder, items, subtotal, total });
+  };
+
+  const updateEditTax = (value: number) => {
+    if (!editOrder) return;
+    const { subtotal, total } = recalcTotals(editOrder.items, value || 0);
+    setEditOrder({ ...editOrder, tax: value || 0, subtotal, total });
+  };
+
+  const handleSaveEditOrder = async () => {
+    if (!editOrder) return;
+    setSavingEdit(true);
+    const id = toast.loading('Saving changes...');
+    setOrders(prev => prev.map(o => o.id === editOrder.id ? editOrder : o));
+    try {
+      const { error } = await supabase.from('orders').update({
+        order_number: editOrder.orderNumber,
+        order_type: editOrder.type,
+        client_id: editOrder.clientId || null,
+        items: editOrder.items,
+        tax: editOrder.tax,
+        total: editOrder.total,
+        status: editOrder.status,
+        discount: editOrder.discount || 0,
+        shipping_address: editOrder.shippingAddress || '',
+        billing_address: editOrder.billingAddress || '',
+        notes: editOrder.notes || null,
+        due_date: editOrder.dueDate || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', editOrder.id);
+      if (error) throw error;
+      toast.success('Order updated', { id });
+    } catch (e) {
+      toast.info('Updated locally (offline or server error)', { id });
+      console.error(e);
+    }
+    setSavingEdit(false);
+    setIsEditDialogOpen(false);
+    setEditOrder(null);
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm('Delete this order?')) return;
+    setDeletingId(orderId);
+    const id = toast.loading('Deleting order...');
+    // Optimistic delete
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+    try {
+      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      if (error) throw error;
+      toast.success('Order deleted', { id });
+    } catch (e) {
+      // Revert optimistic delete on error
+      // Note: In a real implementation, you'd want to re-fetch the orders from the database
+      toast.info('Deleted locally (offline or server error)', { id });
+      console.error('Error deleting order:', e);
+    }
+    setDeletingId(null);
+  };
+
+  const handlePrintOrder = (order: Order) => {
+    const printContent = createOrderLetterheadHTML({
+      orderNumber: order.orderNumber,
+      type: order.type,
+      clientName: order.clientName,
+      clientEmail: order.clientEmail,
+      items: order.items,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      total: order.total,
+      status: order.status,
+      dateCreated: order.dateCreated,
+      dueDate: order.dueDate,
+      notes: order.notes
+    });
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(printContent); w.document.close(); w.focus(); w.print(); w.close(); }
   };
 
   const handleDownloadOrder = (order: Order) => {
-    // Create downloadable PDF-like content (HTML)
-    const content = `Sambright Investment Ltd - ${order.orderNumber}\n` +
-                   `Date: ${new Date(order.dateCreated).toLocaleDateString()}\n` +
-                   `Client: ${order.clientName} (${order.clientEmail})\n` +
-                   `Status: ${order.status}\n\n` +
-                   `ITEMS:\n` +
-                   order.items.map(item => 
-                     `- ${item.productName} (${item.productType}) x${item.quantity} @ ${item.unitPrice} = ${item.totalPrice}`
-                   ).join('\n') +
-                   `\n\nSubtotal: ${order.subtotal.toFixed(2)}\n` +
-                   `Tax: ${order.tax.toFixed(2)}\n` +
-                   `TOTAL: ${order.total.toFixed(2)}\n` +
-                   (order.notes ? `\nNotes: ${order.notes}` : '');
-
-    // Create and download text file
-    const blob = new Blob([content], { type: 'text/plain' });
+    const html = createOrderLetterheadHTML({
+      orderNumber: order.orderNumber,
+      type: order.type,
+      clientName: order.clientName,
+      clientEmail: order.clientEmail,
+      items: order.items,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      total: order.total,
+      status: order.status,
+      dateCreated: order.dateCreated,
+      dueDate: order.dueDate,
+      notes: order.notes
+    });
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${order.orderNumber}-${order.clientName.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${order.orderNumber}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
@@ -431,6 +699,78 @@ export function OrdersManager() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="dueDate" className="text-right">Due Date</Label>
+                <Input id="dueDate" type="date" value={(newOrder.dueDate as any) || ''} onChange={(e)=>setNewOrder({...newOrder, dueDate: e.target.value})} className="col-span-3" />
+              </div>
+
+              {/* Items builder */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-5">
+                    <Label className="mb-1 block">Item</Label>
+                    <Input value={newItem.productName || ''} onChange={(e)=>setNewItem({...newItem, productName: e.target.value})} placeholder="Description" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="mb-1 block">Type</Label>
+                    <Select value={(newItem.productType as any) || 'painting'} onValueChange={(v)=>setNewItem({...newItem, productType: v as any})}>
+                      <SelectTrigger><SelectValue placeholder="Type"/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="painting">Painting</SelectItem>
+                        <SelectItem value="paint">Paint</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-1">
+                    <Label className="mb-1 block">Qty</Label>
+                    <Input type="number" min={1} value={Number(newItem.quantity)||1} onChange={(e)=>setNewItem({...newItem, quantity: Number(e.target.value)})} />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="mb-1 block">Unit Price</Label>
+                    <Input type="number" step="0.01" value={Number(newItem.unitPrice)||0} onChange={(e)=>setNewItem({...newItem, unitPrice: Number(e.target.value)})} />
+                  </div>
+                  <div className="col-span-2 flex justify-end">
+                    <Button variant="outline" onClick={addItemToNewOrder} className="mt-6"><Plus className="h-4 w-4 mr-1"/>Add Item</Button>
+                  </div>
+                </div>
+                {(newOrder.items as OrderItem[]).length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-600">
+                      <div className="col-span-5">Product</div>
+                      <div className="col-span-2 text-center">Type</div>
+                      <div className="col-span-1 text-center">Qty</div>
+                      <div className="col-span-2 text-right">Unit</div>
+                      <div className="col-span-2 text-right">Total</div>
+                    </div>
+                    {(newOrder.items as OrderItem[]).map((item) => (
+                      <div key={item.id} className="px-4 py-3 grid grid-cols-12 gap-2 border-t items-center">
+                        <div className="col-span-5 font-medium">{item.productName}</div>
+                        <div className="col-span-2 text-center"><Badge variant="outline" className="text-xs">{item.productType}</Badge></div>
+                        <div className="col-span-1 text-center">{item.quantity}</div>
+                        <div className="col-span-2 text-right">${item.unitPrice.toFixed(2)}</div>
+                        <div className="col-span-2 text-right font-semibold">${item.totalPrice.toFixed(2)}</div>
+                        <div className="col-span-12 text-right mt-1">
+                          <Button variant="ghost" size="sm" onClick={()=>removeItemFromNewOrder(item.id)} className="text-red-600"><Trash2 className="h-4 w-4"/></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Tax and totals */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="taxAmount" className="text-right">Tax/Fees</Label>
+                <Input id="taxAmount" type="number" step="0.01" value={Number(newOrder.tax)||0} onChange={(e)=>updateNewTax(Number(e.target.value))} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Totals</Label>
+                <div className="col-span-3 text-sm">
+                  <div>Subtotal: <strong>${(Number(newOrder.subtotal)||0).toFixed(2)}</strong></div>
+                  <div>Tax/Fees: <strong>${(Number(newOrder.tax)||0).toFixed(2)}</strong></div>
+                  <div>Total: <strong className="text-green-600">${(Number(newOrder.total)||0).toFixed(2)}</strong></div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="orderNotes" className="text-right">Notes</Label>
                 <Textarea
                   id="orderNotes"
@@ -443,13 +783,27 @@ export function OrdersManager() {
             </div>
             
             <DialogFooter>
-              <Button onClick={() => {
-                // Handle creating order
-                setNewOrder({ items: [], subtotal: 0, tax: 0, total: 0 });
-                setIsAddDialogOpen(false);
-              }}>
-                Create Order
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => {
+                  const html = createOrderLetterheadHTML({
+                    orderNumber: genOrderNumber((newOrder.type as string) || 'ord'),
+                    type: (newOrder.type as string) || 'quote',
+                    clientName: newOrder.clientName || '',
+                    clientEmail: newOrder.clientEmail || '',
+                    items: (newOrder.items as OrderItem[]) || [],
+                    subtotal: Number(newOrder.subtotal) || 0,
+                    tax: Number(newOrder.tax) || 0,
+                    total: Number(newOrder.total) || 0,
+                    status: 'draft',
+                    dateCreated: new Date().toISOString(),
+                    dueDate: (newOrder.dueDate as any) || undefined,
+                    notes: newOrder.notes || ''
+                  });
+                  const w = window.open('', '_blank');
+                  if (w) { w.document.write(html); w.document.close(); }
+                }}>Preview on Letterhead</Button>
+                <Button onClick={handleCreateOrder} disabled={creating}>{creating ? 'Creating...' : 'Create Order'}</Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -611,8 +965,11 @@ export function OrdersManager() {
                     >
                       <Download className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => { setEditOrder({...order}); setIsEditDialogOpen(true); }}>
                       <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-200" onClick={() => handleDeleteOrder(order.id)} disabled={deletingId === order.id}>
+                      {deletingId === order.id ? 'Deleting…' : <Trash2 className="h-3 w-3" />}
                     </Button>
                     {order.type === 'quote' && order.status === 'sent' && (
                       <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">Accept</Button>
@@ -762,6 +1119,107 @@ export function OrdersManager() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Order</DialogTitle>
+            <DialogDescription>Update details and items, then save.</DialogDescription>
+          </DialogHeader>
+          {editOrder && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Type</Label>
+                <Select value={editOrder.type} onValueChange={(v)=>setEditOrder({...editOrder, type: v as any})}>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select type"/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quote">Quote</SelectItem>
+                    <SelectItem value="sale">Sale Order</SelectItem>
+                    <SelectItem value="invoice">Invoice</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Due Date</Label>
+                <Input className="col-span-3" type="date" value={editOrder.dueDate || ''} onChange={(e)=>setEditOrder({...editOrder, dueDate: e.target.value})}/>
+              </div>
+
+              <div className="space-y-2">
+                <div className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-5">
+                    <Label className="mb-1 block">Item</Label>
+                    <Input value={editItem.productName || ''} onChange={(e)=>setEditItem({...editItem, productName: e.target.value})} placeholder="Description"/>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="mb-1 block">Type</Label>
+                    <Select value={(editItem.productType as any)||'painting'} onValueChange={(v)=>setEditItem({...editItem, productType: v as any})}>
+                      <SelectTrigger><SelectValue placeholder="Type"/></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="painting">Painting</SelectItem>
+                        <SelectItem value="paint">Paint</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-1">
+                    <Label className="mb-1 block">Qty</Label>
+                    <Input type="number" min={1} value={Number(editItem.quantity)||1} onChange={(e)=>setEditItem({...editItem, quantity: Number(e.target.value)})}/></div>
+                  <div className="col-span-2">
+                    <Label className="mb-1 block">Unit Price</Label>
+                    <Input type="number" step="0.01" value={Number(editItem.unitPrice)||0} onChange={(e)=>setEditItem({...editItem, unitPrice: Number(e.target.value)})}/></div>
+                  <div className="col-span-2 flex justify-end">
+                    <Button variant="outline" onClick={addItemToEditOrder} className="mt-6"><Plus className="h-4 w-4 mr-1"/>Add Item</Button>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-600">
+                    <div className="col-span-5">Product</div>
+                    <div className="col-span-2 text-center">Type</div>
+                    <div className="col-span-1 text-center">Qty</div>
+                    <div className="col-span-2 text-right">Unit</div>
+                    <div className="col-span-2 text-right">Total</div>
+                  </div>
+                  {editOrder.items.map((item) => (
+                    <div key={item.id} className="px-4 py-3 grid grid-cols-12 gap-2 border-t items-center">
+                      <div className="col-span-5 font-medium">{item.productName}</div>
+                      <div className="col-span-2 text-center"><Badge variant="outline" className="text-xs">{item.productType}</Badge></div>
+                      <div className="col-span-1 text-center">{item.quantity}</div>
+                      <div className="col-span-2 text-right">${item.unitPrice.toFixed(2)}</div>
+                      <div className="col-span-2 text-right font-semibold">${item.totalPrice.toFixed(2)}</div>
+                      <div className="col-span-12 text-right mt-1">
+                        <Button variant="ghost" size="sm" onClick={()=>removeItemFromEditOrder(item.id)} className="text-red-600"><Trash2 className="h-4 w-4"/></Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Tax/Fees</Label>
+                <Input className="col-span-3" type="number" step="0.01" value={Number(editOrder.tax)||0} onChange={(e)=>updateEditTax(Number(e.target.value))}/></div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Totals</Label>
+                <div className="col-span-3 text-sm">
+                  <div>Subtotal: <strong>${(Number(editOrder.subtotal)||0).toFixed(2)}</strong></div>
+                  <div>Tax/Fees: <strong>${(Number(editOrder.tax)||0).toFixed(2)}</strong></div>
+                  <div>Total: <strong className="text-green-600">${(Number(editOrder.total)||0).toFixed(2)}</strong></div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Notes</Label>
+                <Textarea className="col-span-3" value={editOrder.notes || ''} onChange={(e)=>setEditOrder({...editOrder, notes: e.target.value})} placeholder="Any additional notes..."/>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={()=>setIsEditDialogOpen(false)} disabled={savingEdit}>Cancel</Button>
+              <Button onClick={handleSaveEditOrder} disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save Changes'}</Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

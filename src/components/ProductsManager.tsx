@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -17,6 +18,8 @@ import {
   Brush,
   AlertTriangle
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { API_BASE } from '../utils/api';
 
 interface Paint {
   id: string;
@@ -57,91 +60,224 @@ export function ProductsManager() {
   const [editingItem, setEditingItem] = useState<Paint | Painting | null>(null);
   const [newPaint, setNewPaint] = useState<Partial<Paint>>({});
   const [newPainting, setNewPainting] = useState<Partial<Painting>>({});
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setPaints([
-      {
-        id: '1',
-        sku: 'WN-TW-500',
-        brand: 'Winsor & Newton',
-        name: 'Titanium White',
-        size: '500ml',
-        color: 'White',
-        unitPrice: 24.99,
-        supplier: 'Art Supply Co.',
-        stockLevel: 3,
-        minStockLevel: 5,
-        category: 'Acrylic'
-      },
-      {
-        id: '2',
-        sku: 'GLD-UB-200',
-        brand: 'Golden',
-        name: 'Ultramarine Blue',
-        size: '200ml',
-        color: 'Blue',
-        unitPrice: 18.50,
-        supplier: 'Professional Paints Ltd',
-        stockLevel: 12,
-        minStockLevel: 8,
-        category: 'Acrylic'
-      },
-      {
-        id: '3',
-        sku: 'SCH-CR-100',
-        brand: 'Schmincke',
-        name: 'Cadmium Red',
-        size: '100ml',
-        color: 'Red',
-        unitPrice: 32.00,
-        supplier: 'European Art Materials',
-        stockLevel: 2,
-        minStockLevel: 4,
-        category: 'Oil'
-      }
-    ]);
+    // Load products directly from Supabase
+    const loadProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const paintsFromDb = data.filter(p => p.product_type === 'paint').map(p => ({
+            id: p.id,
+            sku: p.sku,
+            brand: p.brand,
+            name: p.name,
+            size: p.size,
+            color: p.color,
+            unitPrice: p.unit_price,
+            supplier: p.supplier,
+            stockLevel: p.stock_level,
+            minStockLevel: p.min_stock_level,
+            category: p.category
+          }));
+          
+          const paintingsFromDb = data.filter(p => p.product_type === 'painting').map(p => ({
+            id: p.id,
+            title: p.title,
+            category: p.category,
+            artist: p.artist,
+            medium: p.medium,
+            size: p.size,
+            price: p.price,
+            galleryLocation: p.gallery_location,
+            status: p.status,
+            dateCreated: p.date_created,
+            description: p.description
+          }));
+          
+          setPaints(paintsFromDb);
+          setPaintings(paintingsFromDb);
+        } else {
+          // Seed demo content if DB empty
+          setPaints([
+            {
+              id: '1',
+              sku: 'WN-TW-500',
+              brand: 'Winsor & Newton',
+              name: 'Titanium White',
+              size: '500ml',
+              color: 'White',
+              unitPrice: 24.99,
+              supplier: 'Art Supply Co.',
+              stockLevel: 3,
+              minStockLevel: 5,
+              category: 'Acrylic'
+            },
+            {
+              id: '2',
+              sku: 'GLD-UB-200',
+              brand: 'Golden',
+              name: 'Ultramarine Blue',
+              size: '200ml',
+              color: 'Blue',
+              unitPrice: 18.50,
+              supplier: 'Professional Paints Ltd',
+              stockLevel: 12,
+              minStockLevel: 8,
+              category: 'Acrylic'
+            },
+            {
+              id: '3',
+              sku: 'SCH-CR-100',
+              brand: 'Schmincke',
+              name: 'Cadmium Red',
+              size: '100ml',
+              color: 'Red',
+              unitPrice: 32.00,
+              supplier: 'European Art Materials',
+              stockLevel: 2,
+              minStockLevel: 4,
+              category: 'Oil'
+            }
+          ]);
 
-    setPaintings([
-      {
-        id: '1',
-        title: 'Sunset Landscape',
-        category: 'Landscape',
-        artist: 'You',
-        medium: 'Oil on Canvas',
-        size: '24 x 36 inches',
-        price: 850,
-        galleryLocation: 'Studio',
-        status: 'available',
-        dateCreated: '2024-01-15',
-        description: 'A beautiful sunset over rolling hills with warm orange and pink tones.'
-      },
-      {
-        id: '2',
-        title: 'Urban Abstract',
-        category: 'Abstract',
-        artist: 'You',
-        medium: 'Acrylic on Canvas',
-        size: '18 x 24 inches',
-        price: 650,
-        galleryLocation: 'Downtown Gallery',
-        status: 'consignment',
-        dateCreated: '2024-02-03',
-        description: 'Modern abstract piece inspired by city architecture.'
-      },
-      {
-        id: '3',
-        title: 'Portrait Study',
-        category: 'Portrait',
-        artist: 'You',
-        medium: 'Watercolor',
-        size: '12 x 16 inches',
-        price: 450,
-        status: 'sold',
-        dateCreated: '2024-01-28',
-        description: 'Commissioned portrait study with soft watercolor techniques.'
+          setPaintings([
+            {
+              id: '1',
+              title: 'Sunset Landscape',
+              category: 'Landscape',
+              artist: 'You',
+              medium: 'Oil on Canvas',
+              size: '24 x 36 inches',
+              price: 850,
+              galleryLocation: 'Studio',
+              status: 'available',
+              dateCreated: '2024-01-15',
+              description: 'A beautiful sunset over rolling hills with warm orange and pink tones.'
+            },
+            {
+              id: '2',
+              title: 'Urban Abstract',
+              category: 'Abstract',
+              artist: 'You',
+              medium: 'Acrylic on Canvas',
+              size: '18 x 24 inches',
+              price: 650,
+              galleryLocation: 'Downtown Gallery',
+              status: 'consignment',
+              dateCreated: '2024-02-03',
+              description: 'Modern abstract piece inspired by city architecture.'
+            },
+            {
+              id: '3',
+              title: 'Portrait Study',
+              category: 'Portrait',
+              artist: 'You',
+              medium: 'Watercolor',
+              size: '12 x 16 inches',
+              price: 450,
+              status: 'sold',
+              dateCreated: '2024-01-28',
+              description: 'Commissioned portrait study with soft watercolor techniques.'
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+        // Fallback to seed data if there's an error
+        setPaints([
+          {
+            id: '1',
+            sku: 'WN-TW-500',
+            brand: 'Winsor & Newton',
+            name: 'Titanium White',
+            size: '500ml',
+            color: 'White',
+            unitPrice: 24.99,
+            supplier: 'Art Supply Co.',
+            stockLevel: 3,
+            minStockLevel: 5,
+            category: 'Acrylic'
+          },
+          {
+            id: '2',
+            sku: 'GLD-UB-200',
+            brand: 'Golden',
+            name: 'Ultramarine Blue',
+            size: '200ml',
+            color: 'Blue',
+            unitPrice: 18.50,
+            supplier: 'Professional Paints Ltd',
+            stockLevel: 12,
+            minStockLevel: 8,
+            category: 'Acrylic'
+          },
+          {
+            id: '3',
+            sku: 'SCH-CR-100',
+            brand: 'Schmincke',
+            name: 'Cadmium Red',
+            size: '100ml',
+            color: 'Red',
+            unitPrice: 32.00,
+            supplier: 'European Art Materials',
+            stockLevel: 2,
+            minStockLevel: 4,
+            category: 'Oil'
+          }
+        ]);
+
+        setPaintings([
+          {
+            id: '1',
+            title: 'Sunset Landscape',
+            category: 'Landscape',
+            artist: 'You',
+            medium: 'Oil on Canvas',
+            size: '24 x 36 inches',
+            price: 850,
+            galleryLocation: 'Studio',
+            status: 'available',
+            dateCreated: '2024-01-15',
+            description: 'A beautiful sunset over rolling hills with warm orange and pink tones.'
+          },
+          {
+            id: '2',
+            title: 'Urban Abstract',
+            category: 'Abstract',
+            artist: 'You',
+            medium: 'Acrylic on Canvas',
+            size: '18 x 24 inches',
+            price: 650,
+            galleryLocation: 'Downtown Gallery',
+            status: 'consignment',
+            dateCreated: '2024-02-03',
+            description: 'Modern abstract piece inspired by city architecture.'
+          },
+          {
+            id: '3',
+            title: 'Portrait Study',
+            category: 'Portrait',
+            artist: 'You',
+            medium: 'Watercolor',
+            size: '12 x 16 inches',
+            price: 450,
+            status: 'sold',
+            dateCreated: '2024-01-28',
+            description: 'Commissioned portrait study with soft watercolor techniques.'
+          }
+        ]);
       }
-    ]);
+    };
+    
+    loadProducts();
   }, []);
 
   const filteredPaints = paints.filter(paint => {
@@ -160,9 +296,9 @@ export function ProductsManager() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddPaint = () => {
+  const handleAddPaint = async () => {
     if (newPaint.name && newPaint.brand && newPaint.unitPrice) {
-      const paint: Paint = {
+      const paint = {
         id: Date.now().toString(),
         sku: newPaint.sku || `${newPaint.brand?.substr(0,3).toUpperCase()}-${Date.now()}`,
         brand: newPaint.brand,
@@ -175,15 +311,55 @@ export function ProductsManager() {
         minStockLevel: newPaint.minStockLevel || 5,
         category: newPaint.category || 'Other'
       };
-      setPaints([...paints, paint]);
+
+      // Optimistic update
+      setPaints([...paints, paint as Paint]);
+      const loadingId = toast.loading('Adding paint...');
+
+      try {
+        // Insert directly into Supabase
+        const { data, error } = await supabase
+          .from('products')
+          .insert([
+            {
+              product_type: 'paint',
+              sku: paint.sku,
+              brand: paint.brand,
+              name: paint.name,
+              size: paint.size,
+              color: paint.color,
+              unit_price: paint.unitPrice,
+              supplier: paint.supplier,
+              stock_level: paint.stockLevel,
+              min_stock_level: paint.minStockLevel,
+              category: paint.category
+            }
+          ])
+          .select();
+
+        if (error) throw error;
+        
+        // Update the local state with the actual ID from the database
+        if (data && data.length > 0) {
+          setPaints(prev => prev.map(p => p.id === paint.id ? {...p, id: data[0].id} : p));
+        }
+        
+        toast.success('Paint added successfully', { id: loadingId });
+      } catch (error) {
+        console.error('Error adding paint:', error);
+        toast.error('Failed to add paint', { id: loadingId });
+        // Remove the optimistic update if there was an error
+        setPaints(prev => prev.filter(p => p.id !== paint.id));
+      }
+
       setNewPaint({});
       setIsAddDialogOpen(false);
     }
   };
 
-  const handleAddPainting = () => {
+  const handleAddPainting = async () => {
     if (newPainting.title && newPainting.price && newPainting.medium) {
-      const painting: Painting = {
+      const painting = {
         id: Date.now().toString(),
         title: newPainting.title,
         category: newPainting.category || 'Other',
@@ -196,7 +372,47 @@ export function ProductsManager() {
         dateCreated: new Date().toISOString().split('T')[0],
         description: newPainting.description
       };
-      setPaintings([...paintings, painting]);
+
+      // Optimistic update
+      setPaintings([...paintings, painting as Painting]);
+      const loadingId = toast.loading('Adding painting...');
+
+      try {
+        // Insert directly into Supabase
+        const { data, error } = await supabase
+          .from('products')
+          .insert([
+            {
+              product_type: 'painting',
+              title: painting.title,
+              category: painting.category,
+              artist: painting.artist,
+              medium: painting.medium,
+              size: painting.size,
+              price: painting.price,
+              gallery_location: painting.galleryLocation,
+              status: painting.status,
+              date_created: painting.dateCreated,
+              description: painting.description
+            }
+          ])
+          .select();
+
+        if (error) throw error;
+        
+        // Update the local state with the actual ID from the database
+        if (data && data.length > 0) {
+          setPaintings(prev => prev.map(p => p.id === painting.id ? {...p, id: data[0].id} : p));
+        }
+        
+        toast.success('Painting added successfully', { id: loadingId });
+      } catch (error) {
+        console.error('Error adding painting:', error);
+        toast.error('Failed to add painting', { id: loadingId });
+        // Remove the optimistic update if there was an error
+        setPaintings(prev => prev.filter(p => p.id !== painting.id));
+      }
+
       setNewPainting({});
       setIsAddDialogOpen(false);
     }
@@ -214,7 +430,7 @@ export function ProductsManager() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateItem = () => {
+  const handleUpdateItem = async () => {
     if (!editingItem) return;
 
     if (activeTab === 'paints' && 'sku' in editingItem) {
@@ -222,17 +438,105 @@ export function ProductsManager() {
         paint.id === editingItem.id ? { ...paint, ...newPaint } as Paint : paint
       );
       setPaints(updatedPaints);
+      
+      setSaving(true);
+      const id = toast.loading('Saving changes...');
+      
+      try {
+        // Update directly in Supabase
+        const { error } = await supabase
+          .from('products')
+          .update({
+            product_type: 'paint',
+            sku: newPaint.sku,
+            brand: newPaint.brand,
+            name: newPaint.name,
+            size: newPaint.size,
+            color: newPaint.color,
+            unit_price: newPaint.unitPrice,
+            supplier: newPaint.supplier,
+            stock_level: newPaint.stockLevel,
+            min_stock_level: newPaint.minStockLevel,
+            category: newPaint.category
+          })
+          .eq('id', editingItem.id);
+
+        if (error) throw error;
+        toast.success('Product updated successfully', { id });
+      } catch (error) {
+        console.error('Error updating product:', error);
+        toast.error('Failed to update product', { id });
+      }
+      
+      setSaving(false);
     } else if (activeTab === 'paintings' && 'title' in editingItem) {
       const updatedPaintings = paintings.map(painting => 
         painting.id === editingItem.id ? { ...painting, ...newPainting } as Painting : painting
       );
       setPaintings(updatedPaintings);
+      
+      setSaving(true);
+      const id = toast.loading('Saving changes...');
+      
+      try {
+        // Update directly in Supabase
+        const { error } = await supabase
+          .from('products')
+          .update({
+            product_type: 'painting',
+            title: newPainting.title,
+            category: newPainting.category,
+            artist: newPainting.artist,
+            medium: newPainting.medium,
+            size: newPainting.size,
+            price: newPainting.price,
+            gallery_location: newPainting.galleryLocation,
+            status: newPainting.status,
+            date_created: newPainting.dateCreated,
+            description: newPainting.description
+          })
+          .eq('id', editingItem.id);
+
+        if (error) throw error;
+        toast.success('Product updated successfully', { id });
+      } catch (error) {
+        console.error('Error updating product:', error);
+        toast.error('Failed to update product', { id });
+      }
+      
+      setSaving(false);
     }
 
     setIsEditDialogOpen(false);
     setEditingItem(null);
     setNewPaint({});
     setNewPainting({});
+  };
+
+  const handleDeleteProduct = async (id: string, type: 'paint' | 'painting') => {
+    if (!window.confirm('Delete this product?')) return;
+    setDeletingId(id);
+    const toastId = toast.loading('Deleting product...');
+    
+    if (type === 'paint') setPaints(prev => prev.filter(p => p.id !== id));
+    else setPaintings(prev => prev.filter(p => p.id !== id));
+    
+    try {
+      // Delete directly from Supabase
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Product deleted successfully', { id: toastId });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product', { id: toastId });
+      // If there was an error, we might want to add the product back to the UI
+    }
+    
+    setDeletingId(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -607,12 +911,12 @@ export function ProductsManager() {
                     <span className="text-sm">{paint.supplier}</span>
                   </div>
                   <div className="flex space-x-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={()=>handleEditPaint(paint)}>
                       <Edit className="h-3 w-3 mr-1" />
                       Edit
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-3 w-3" />
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={()=>handleDeleteProduct(paint.id,'paint')} disabled={deletingId===paint.id}>
+                      {deletingId===paint.id ? 'Deleting…' : 'Delete'}
                     </Button>
                   </div>
                 </CardContent>
@@ -670,8 +974,8 @@ export function ProductsManager() {
                       <Edit className="h-3 w-3 mr-1" />
                       <span className="hidden sm:inline">Edit</span>
                     </Button>
-                    <Button variant="outline" size="sm" className="hover:bg-gray-50">
-                      <Eye className="h-3 w-3" />
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={()=>handleDeleteProduct(painting.id,'painting')} disabled={deletingId===painting.id}>
+                      {deletingId===painting.id ? 'Deleting…' : 'Delete'}
                     </Button>
                   </div>
                 </CardContent>

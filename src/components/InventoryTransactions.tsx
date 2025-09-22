@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -19,7 +20,8 @@ import {
   User,
   AlertTriangle,
   CheckCircle,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 
 interface InventoryTransaction {
@@ -53,101 +55,155 @@ export function InventoryTransactions() {
   const [newTransaction, setNewTransaction] = useState<Partial<InventoryTransaction>>({});
 
   useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setTransactions([
-      {
-        id: '1',
-        transactionNumber: 'TXN-2024-001',
-        type: 'stock_in',
-        productId: 'p1',
-        productName: 'Titanium White 500ml',
-        productType: 'paint',
-        quantity: 12,
-        unitCost: 24.99,
-        totalCost: 299.88,
-        reason: 'Restock from supplier',
-        referenceType: 'purchase',
-        referenceId: 'PO-2024-015',
-        dateCreated: '2024-09-18',
-        createdBy: 'System',
-        supplierId: '1',
-        supplierName: 'Art Supply Co.',
-        notes: 'Bulk order delivery'
-      },
-      {
-        id: '2',
-        transactionNumber: 'TXN-2024-002',
-        type: 'stock_out',
-        productId: 'p2',
-        productName: 'Sunset Landscape',
-        productType: 'painting',
-        quantity: 1,
-        reason: 'Sale to customer',
-        referenceType: 'sale',
-        referenceId: 'ORD-2024-001',
-        dateCreated: '2024-09-15',
-        createdBy: 'System',
-        clientId: '1',
-        clientName: 'Sarah Johnson',
-        notes: 'Painting sold to Modern Interiors Design'
-      },
-      {
-        id: '3',
-        transactionNumber: 'TXN-2024-003',
-        type: 'stock_out',
-        productId: 'p3',
-        productName: 'Ultramarine Blue 200ml',
-        productType: 'paint',
-        quantity: 2,
-        reason: 'Used in painting creation',
-        dateCreated: '2024-09-14',
-        createdBy: 'Manual Entry',
-        notes: 'Used for commissioned landscape painting'
-      },
-      {
-        id: '4',
-        transactionNumber: 'TXN-2024-004',
-        type: 'damaged',
-        productId: 'p4',
-        productName: 'Canvas 24x36',
-        productType: 'paint',
-        quantity: 1,
-        reason: 'Damaged during transport',
-        dateCreated: '2024-09-12',
-        createdBy: 'Manual Entry',
-        notes: 'Canvas arrived with tears, supplier notified'
-      },
-      {
-        id: '5',
-        transactionNumber: 'TXN-2024-005',
-        type: 'adjustment',
-        productId: 'p5',
-        productName: 'Cadmium Red 100ml',
-        productType: 'paint',
-        quantity: -1,
-        reason: 'Inventory count correction',
-        dateCreated: '2024-09-10',
-        createdBy: 'Manual Entry',
-        notes: 'Monthly inventory audit adjustment'
-      },
-      {
-        id: '6',
-        transactionNumber: 'TXN-2024-006',
-        type: 'return',
-        productId: 'p6',
-        productName: 'Abstract Study #3',
-        productType: 'painting',
-        quantity: 1,
-        reason: 'Customer return',
-        referenceType: 'return',
-        referenceId: 'RET-2024-001',
-        dateCreated: '2024-09-08',
-        createdBy: 'System',
-        clientId: '2',
-        clientName: 'Gallery Aurora',
-        notes: 'Client changed mind on color scheme'
+    // Load transactions from Supabase
+    const loadTransactions = async () => {
+      try {
+        // First load inventory transactions
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('inventory_transactions')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (transactionsError) throw transactionsError;
+        
+        // Then load products to get product names
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (productsError) throw productsError;
+        
+        // Create a product lookup map
+        const productLookup = productsData.reduce((acc, product) => {
+          acc[product.id] = product;
+          return acc;
+        }, {});
+        
+        // Map transaction data to our interface
+        const mappedTransactions = transactionsData.map(transaction => ({
+          id: transaction.id,
+          transactionNumber: transaction.transaction_number,
+          type: transaction.type,
+          productId: transaction.product_id,
+          productName: productLookup[transaction.product_id]?.name || transaction.product_name || 'Unknown Product',
+          productType: productLookup[transaction.product_id]?.product_type || 'paint',
+          quantity: transaction.quantity,
+          unitCost: transaction.unit_cost || 0,
+          totalCost: transaction.total_cost || 0,
+          reason: transaction.reason || '',
+          referenceType: transaction.reference_type || '',
+          referenceId: transaction.reference_id || '',
+          dateCreated: transaction.created_at ? new Date(transaction.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          createdBy: transaction.created_by || 'System',
+          notes: transaction.notes || '',
+          supplierId: transaction.supplier_id || '',
+          supplierName: transaction.supplier_name || '',
+          clientId: transaction.client_id || '',
+          clientName: transaction.client_name || ''
+        }));
+        
+        setTransactions(mappedTransactions);
+      } catch (error) {
+        console.error('Error loading inventory transactions:', error);
+        // Fallback to mock data on error
+        setTransactions([
+          {
+            id: '1',
+            transactionNumber: 'TXN-2024-001',
+            type: 'stock_in',
+            productId: 'p1',
+            productName: 'Titanium White 500ml',
+            productType: 'paint',
+            quantity: 12,
+            unitCost: 24.99,
+            totalCost: 299.88,
+            reason: 'Restock from supplier',
+            referenceType: 'purchase',
+            referenceId: 'PO-2024-015',
+            dateCreated: '2024-09-18',
+            createdBy: 'System',
+            supplierId: '1',
+            supplierName: 'Art Supply Co.',
+            notes: 'Bulk order delivery'
+          },
+          {
+            id: '2',
+            transactionNumber: 'TXN-2024-002',
+            type: 'stock_out',
+            productId: 'p2',
+            productName: 'Sunset Landscape',
+            productType: 'painting',
+            quantity: 1,
+            reason: 'Sale to customer',
+            referenceType: 'sale',
+            referenceId: 'ORD-2024-001',
+            dateCreated: '2024-09-15',
+            createdBy: 'System',
+            clientId: '1',
+            clientName: 'Sarah Johnson',
+            notes: 'Painting sold to Modern Interiors Design'
+          },
+          {
+            id: '3',
+            transactionNumber: 'TXN-2024-003',
+            type: 'stock_out',
+            productId: 'p3',
+            productName: 'Ultramarine Blue 200ml',
+            productType: 'paint',
+            quantity: 2,
+            reason: 'Used in painting creation',
+            dateCreated: '2024-09-14',
+            createdBy: 'Manual Entry',
+            notes: 'Used for commissioned landscape painting'
+          },
+          {
+            id: '4',
+            transactionNumber: 'TXN-2024-004',
+            type: 'damaged',
+            productId: 'p4',
+            productName: 'Canvas 24x36',
+            productType: 'paint',
+            quantity: 1,
+            reason: 'Damaged during transport',
+            dateCreated: '2024-09-12',
+            createdBy: 'Manual Entry',
+            notes: 'Canvas arrived with tears, supplier notified'
+          },
+          {
+            id: '5',
+            transactionNumber: 'TXN-2024-005',
+            type: 'adjustment',
+            productId: 'p5',
+            productName: 'Cadmium Red 100ml',
+            productType: 'paint',
+            quantity: -1,
+            reason: 'Inventory count correction',
+            dateCreated: '2024-09-10',
+            createdBy: 'Manual Entry',
+            notes: 'Monthly inventory audit adjustment'
+          },
+          {
+            id: '6',
+            transactionNumber: 'TXN-2024-006',
+            type: 'return',
+            productId: 'p6',
+            productName: 'Abstract Study #3',
+            productType: 'painting',
+            quantity: 1,
+            reason: 'Customer return',
+            referenceType: 'return',
+            referenceId: 'RET-2024-001',
+            dateCreated: '2024-09-08',
+            createdBy: 'System',
+            clientId: '2',
+            clientName: 'Gallery Aurora',
+            notes: 'Client changed mind on color scheme'
+          }
+        ]);
       }
-    ]);
+    };
+    
+    loadTransactions();
   }, []);
 
   const filteredTransactions = transactions.filter(transaction => {
@@ -178,26 +234,193 @@ export function InventoryTransactions() {
     return matchesSearch && matchesType && matchesDate;
   });
 
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (newTransaction.productName && newTransaction.quantity && newTransaction.type) {
-      const transaction: InventoryTransaction = {
-        id: Date.now().toString(),
-        transactionNumber: `TXN-${new Date().getFullYear()}-${String(transactions.length + 1).padStart(3, '0')}`,
-        type: newTransaction.type as any,
-        productId: Date.now().toString(),
-        productName: newTransaction.productName,
-        productType: (newTransaction.productType as any) || 'paint',
+      // Create a new transaction
+      const transactionData = {
+        transaction_number: `TXN-${new Date().getFullYear()}-${String(transactions.length + 1).padStart(3, '0')}`,
+        type: newTransaction.type,
+        product_id: newTransaction.productId || null,
+        product_name: newTransaction.productName,
+        product_type: newTransaction.productType || 'paint',
         quantity: newTransaction.quantity,
-        unitCost: newTransaction.unitCost,
-        totalCost: newTransaction.unitCost && newTransaction.quantity ? newTransaction.unitCost * Math.abs(newTransaction.quantity) : undefined,
+        unit_cost: newTransaction.unitCost || 0,
+        total_cost: newTransaction.unitCost && newTransaction.quantity ? newTransaction.unitCost * Math.abs(newTransaction.quantity) : 0,
         reason: newTransaction.reason || '',
-        dateCreated: new Date().toISOString().split('T')[0],
-        createdBy: 'Manual Entry',
-        notes: newTransaction.notes
+        reference_type: newTransaction.referenceType || null,
+        reference_id: newTransaction.referenceId || null,
+        notes: newTransaction.notes || '',
+        supplier_id: newTransaction.supplierId || null,
+        supplier_name: newTransaction.supplierName || '',
+        client_id: newTransaction.clientId || null,
+        client_name: newTransaction.clientName || '',
+        created_by: 'Manual Entry',
+        created_at: new Date().toISOString()
       };
-      setTransactions([transaction, ...transactions]);
-      setNewTransaction({});
-      setIsAddDialogOpen(false);
+      
+      try {
+        // Insert the transaction into Supabase
+        const { data, error } = await supabase
+          .from('inventory_transactions')
+          .insert([transactionData])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        // Create the transaction object for the UI
+        const transaction: InventoryTransaction = {
+          id: data.id,
+          transactionNumber: transactionData.transaction_number,
+          type: transactionData.type as any,
+          productId: transactionData.product_id || '',
+          productName: transactionData.product_name,
+          productType: transactionData.product_type as any,
+          quantity: transactionData.quantity,
+          unitCost: transactionData.unit_cost,
+          totalCost: transactionData.total_cost,
+          reason: transactionData.reason,
+          referenceType: transactionData.reference_type || undefined,
+          referenceId: transactionData.reference_id || undefined,
+          dateCreated: new Date(transactionData.created_at).toISOString().split('T')[0],
+          createdBy: transactionData.created_by,
+          notes: transactionData.notes,
+          supplierId: transactionData.supplier_id || undefined,
+          supplierName: transactionData.supplier_name || undefined,
+          clientId: transactionData.client_id || undefined,
+          clientName: transactionData.client_name || undefined
+        };
+        
+        // If this transaction affects a product's stock, update the product stock level
+        if (newTransaction.productId) {
+          await updateProductStockLevel(
+            newTransaction.productId, 
+            newTransaction.type, 
+            newTransaction.quantity
+          );
+        }
+        
+        // Optimistically update the UI
+        setTransactions([transaction, ...transactions]);
+        setNewTransaction({});
+        setIsAddDialogOpen(false);
+      } catch (error) {
+        console.error('Error adding transaction:', error);
+        // Fallback to local state only if there's an error
+        const transaction: InventoryTransaction = {
+          id: Date.now().toString(),
+          transactionNumber: `TXN-${new Date().getFullYear()}-${String(transactions.length + 1).padStart(3, '0')}`,
+          type: newTransaction.type as any,
+          productId: newTransaction.productId || '',
+          productName: newTransaction.productName,
+          productType: (newTransaction.productType as any) || 'paint',
+          quantity: newTransaction.quantity,
+          unitCost: newTransaction.unitCost,
+          totalCost: newTransaction.unitCost && newTransaction.quantity ? newTransaction.unitCost * Math.abs(newTransaction.quantity) : undefined,
+          reason: newTransaction.reason || '',
+          dateCreated: new Date().toISOString().split('T')[0],
+          createdBy: 'Manual Entry',
+          notes: newTransaction.notes
+        };
+        setTransactions([transaction, ...transactions]);
+        setNewTransaction({});
+        setIsAddDialogOpen(false);
+      }
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+    
+    try {
+      // First, get the transaction to reverse its effect on stock
+      const { data: transactionData, error: fetchError } = await supabase
+        .from('inventory_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Delete the transaction from Supabase
+      const { error: deleteError } = await supabase
+        .from('inventory_transactions')
+        .delete()
+        .eq('id', transactionId);
+      
+      if (deleteError) throw deleteError;
+      
+      // If the transaction affected a product's stock, we should reverse that effect
+      if (transactionData.product_id) {
+        // Get current product stock level
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .select('stock_level')
+          .eq('id', transactionData.product_id)
+          .single();
+        
+        if (!productError && productData) {
+          // Reverse the transaction effect
+          // For stock_in transactions, we subtract from stock
+          // For stock_out transactions, we add to stock
+          let stockChange = 0;
+          if (transactionData.type === 'stock_in') {
+            stockChange = -transactionData.quantity;
+          } else if (['stock_out', 'damaged', 'lost', 'return'].includes(transactionData.type)) {
+            stockChange = Math.abs(transactionData.quantity);
+          }
+          
+          // Update product stock level
+          if (stockChange !== 0) {
+            const newStockLevel = Math.max(0, (productData.stock_level || 0) + stockChange);
+            await supabase
+              .from('products')
+              .update({ stock_level: newStockLevel })
+              .eq('id', transactionData.product_id);
+          }
+        }
+      }
+      
+      // Update the local state
+      setTransactions(transactions.filter(t => t.id !== transactionId));
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      // Show error message to user
+      alert('Failed to delete transaction. Please try again.');
+    }
+  };
+
+  const updateProductStockLevel = async (productId: string, transactionType: string, quantity: number) => {
+    try {
+      // Get current product stock level
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('stock_level')
+        .eq('id', productId)
+        .single();
+      
+      if (productError) throw productError;
+      
+      // Calculate stock change based on transaction type
+      let stockChange = 0;
+      if (transactionType === 'stock_in') {
+        stockChange = Math.abs(quantity);
+      } else if (['stock_out', 'damaged', 'lost', 'return'].includes(transactionType)) {
+        stockChange = -Math.abs(quantity);
+      }
+      
+      // Update product stock level
+      if (stockChange !== 0) {
+        const newStockLevel = Math.max(0, (productData.stock_level || 0) + stockChange);
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ stock_level: newStockLevel })
+          .eq('id', productId);
+        
+        if (updateError) throw updateError;
+      }
+    } catch (error) {
+      console.error('Error updating product stock level:', error);
     }
   };
 
@@ -464,13 +687,26 @@ export function InventoryTransactions() {
                     {getTransactionTypeIcon(transaction.type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-lg">{transaction.transactionNumber}</h3>
-                      {getTransactionTypeBadge(transaction.type)}
-                      <Badge variant="outline" className="text-xs">
-                        {transaction.productType}
-                      </Badge>
-                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <h3 className="font-semibold text-lg">{transaction.transactionNumber}</h3>
+                          {getTransactionTypeBadge(transaction.type)}
+                          <Badge variant="outline" className="text-xs">
+                            {transaction.productType}
+                          </Badge>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTransaction(transaction.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     
                     <div className="text-gray-900 font-medium mb-1">{transaction.productName}</div>
                     <div className="text-sm text-gray-600 mb-2">{transaction.reason}</div>

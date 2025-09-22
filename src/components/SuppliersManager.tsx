@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -58,7 +59,9 @@ export function SuppliersManager() {
   const [selectedType, setSelectedType] = useState('all');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({
     products: [],
@@ -66,77 +69,183 @@ export function SuppliersManager() {
   });
 
   useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setSuppliers([
-      {
-        id: '1',
-        name: 'Art Supply Co.',
-        contactPerson: 'John Martinez',
-        email: 'orders@artsupplyco.com',
-        phone: '+1 (555) 123-0001',
-        address: '123 Supply Street, Industrial District, NY 10001',
-        website: 'www.artsupplyco.com',
-        supplierType: 'paints',
-        paymentTerms: 'Net 30',
-        rating: 4.5,
-        totalOrders: 24,
-        totalSpent: 12450,
-        lastOrder: '2024-09-15',
-        dateAdded: '2023-05-10',
-        notes: 'Reliable supplier for premium paints. Good bulk discounts.',
-        products: ['Winsor & Newton', 'Golden Acrylics', 'Liquitex'],
-        recentTransactions: [
-          { id: '1', date: '2024-09-15', amount: 850, description: 'Oil paint bulk order', status: 'completed' },
-          { id: '2', date: '2024-08-22', amount: 1200, description: 'Acrylic paint restocking', status: 'completed' },
-          { id: '3', date: '2024-08-05', amount: 650, description: 'Specialty pigments', status: 'completed' }
-        ]
-      },
-      {
-        id: '2',
-        name: 'Professional Paints Ltd',
-        contactPerson: 'Sarah Wilson',
-        email: 'sarah@profpaints.com',
-        phone: '+1 (555) 456-0002',
-        address: '456 Paint Avenue, Commerce City, CA 90210',
-        website: 'www.professionalpaintsltd.com',
-        supplierType: 'paints',
-        paymentTerms: 'Net 15',
-        rating: 4.8,
-        totalOrders: 18,
-        totalSpent: 9800,
-        lastOrder: '2024-09-12',
-        dateAdded: '2023-08-15',
-        notes: 'Excellent quality, fast shipping. Preferred supplier for watercolors.',
-        products: ['Schmincke', 'Daniel Smith', 'M. Graham'],
-        recentTransactions: [
-          { id: '1', date: '2024-09-12', amount: 920, description: 'Watercolor paint set', status: 'completed' },
-          { id: '2', date: '2024-07-28', amount: 760, description: 'Professional grade brushes', status: 'completed' },
-          { id: '3', date: '2024-07-10', amount: 1100, description: 'Canvas and mediums', status: 'completed' }
-        ]
-      },
-      {
-        id: '3',
-        name: 'Canvas & Frame Works',
-        contactPerson: 'Michael Chen',
-        email: 'mike@canvasframes.com',
-        phone: '+1 (555) 789-0003',
-        address: '789 Workshop Lane, Art District, FL 33101',
-        supplierType: 'canvas',
-        paymentTerms: 'Net 45',
-        rating: 4.2,
-        totalOrders: 15,
-        totalSpent: 6750,
-        lastOrder: '2024-09-08',
-        dateAdded: '2023-12-01',
-        notes: 'Good for bulk canvas orders. Custom stretching available.',
-        products: ['Stretched Canvas', 'Canvas Boards', 'Custom Frames'],
-        recentTransactions: [
-          { id: '1', date: '2024-09-08', amount: 580, description: 'Large canvas order', status: 'completed' },
-          { id: '2', date: '2024-08-15', amount: 320, description: 'Canvas boards various sizes', status: 'completed' },
-          { id: '3', date: '2024-07-20', amount: 450, description: 'Custom frame order', status: 'pending' }
-        ]
+    // Load suppliers directly from Supabase
+    const loadSuppliers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('suppliers')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const suppliersFromDb = data.map(supplier => ({
+            id: supplier.id,
+            name: supplier.company_name,
+            contactPerson: supplier.contact_person,
+            email: supplier.email,
+            phone: supplier.phone,
+            address: supplier.address,
+            website: '', // You might want to add this to your database
+            supplierType: 'general', // Default value, you might want to add this to your database
+            paymentTerms: '', // You might want to add this to your database
+            rating: supplier.rating || 0,
+            totalOrders: supplier.total_orders || 0,
+            totalSpent: supplier.total_spent || 0,
+            lastOrder: '', // You might want to add this to your database
+            dateAdded: supplier.created_at ? new Date(supplier.created_at).toISOString().split('T')[0] : '',
+            notes: '', // You might want to add this to your database
+            products: [], // You might want to add this to your database
+            recentTransactions: supplier.recent_transactions || []
+          }));
+          
+          setSuppliers(suppliersFromDb);
+        } else {
+          // Seed demo content if DB empty
+          setSuppliers([
+            {
+              id: '1',
+              name: 'Winsor & Newton',
+              contactPerson: 'James Wilson',
+              email: 'orders@winsornewton.com',
+              phone: '+1 (800) 555-0123',
+              address: '123 Art Supply Blvd, Creative City, NY 10001',
+              website: 'www.winsornewton.com',
+              supplierType: 'paints',
+              paymentTerms: 'Net 30',
+              rating: 4.8,
+              totalOrders: 24,
+              totalSpent: 12450,
+              lastOrder: '2024-09-15',
+              dateAdded: '2023-01-15',
+              notes: 'Premium paints supplier. Always delivers on time.',
+              products: ['Oil Paints', 'Watercolors', 'Brushes'],
+              recentTransactions: [
+                { id: '1', date: '2024-09-15', amount: 850, items: 'Professional oil paint set' },
+                { id: '2', date: '2024-08-22', amount: 420, items: 'Watercolor tubes assortment' }
+              ]
+            },
+            {
+              id: '2',
+              name: 'Canvas & More Co.',
+              contactPerson: 'Lisa Thompson',
+              email: 'lisa@canvasmore.com',
+              phone: '+1 (800) 555-0456',
+              address: '456 Canvas Street, Art District, CA 90210',
+              website: 'www.canvasmore.com',
+              supplierType: 'canvas',
+              paymentTerms: 'Net 15',
+              rating: 4.5,
+              totalOrders: 18,
+              totalSpent: 3280,
+              lastOrder: '2024-09-10',
+              dateAdded: '2023-03-22',
+              notes: 'Good quality canvases at competitive prices.',
+              products: ['Stretched Canvases', 'Canvas Panels', 'Primers'],
+              recentTransactions: [
+                { id: '1', date: '2024-09-10', amount: 320, items: 'Large canvas set (10 pieces)' },
+                { id: '2', date: '2024-08-05', amount: 180, items: 'Canvas panels bulk order' }
+              ]
+            },
+            {
+              id: '3',
+              name: 'Frame Masters',
+              contactPerson: 'Robert Chen',
+              email: 'robert@framemasters.com',
+              phone: '+1 (800) 555-0789',
+              address: '789 Frame Avenue, Gallery District, FL 33101',
+              website: 'www.framemasters.com',
+              supplierType: 'frames',
+              paymentTerms: 'Net 30',
+              rating: 4.9,
+              totalOrders: 15,
+              totalSpent: 4670,
+              lastOrder: '2024-09-05',
+              dateAdded: '2023-05-10',
+              notes: 'Specializes in custom framing. Excellent craftsmanship.',
+              products: ['Wooden Frames', 'Metal Frames', 'Custom Framing'],
+              recentTransactions: [
+                { id: '1', date: '2024-09-05', amount: 850, items: 'Custom frames for gallery show' },
+                { id: '2', date: '2024-07-18', amount: 620, items: 'Bulk order wooden frames' }
+              ]
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading suppliers:', error);
+        // Fallback to seed data if there's an error
+        setSuppliers([
+          {
+            id: '1',
+            name: 'Winsor & Newton',
+            contactPerson: 'James Wilson',
+            email: 'orders@winsornewton.com',
+            phone: '+1 (800) 555-0123',
+            address: '123 Art Supply Blvd, Creative City, NY 10001',
+            website: 'www.winsornewton.com',
+            supplierType: 'paints',
+            paymentTerms: 'Net 30',
+            rating: 4.8,
+            totalOrders: 24,
+            totalSpent: 12450,
+            lastOrder: '2024-09-15',
+            dateAdded: '2023-01-15',
+            notes: 'Premium paints supplier. Always delivers on time.',
+            products: ['Oil Paints', 'Watercolors', 'Brushes'],
+            recentTransactions: [
+              { id: '1', date: '2024-09-15', amount: 850, items: 'Professional oil paint set' },
+              { id: '2', date: '2024-08-22', amount: 420, items: 'Watercolor tubes assortment' }
+            ]
+          },
+          {
+            id: '2',
+            name: 'Canvas & More Co.',
+            contactPerson: 'Lisa Thompson',
+            email: 'lisa@canvasmore.com',
+            phone: '+1 (800) 555-0456',
+            address: '456 Canvas Street, Art District, CA 90210',
+            website: 'www.canvasmore.com',
+            supplierType: 'canvas',
+            paymentTerms: 'Net 15',
+            rating: 4.5,
+            totalOrders: 18,
+            totalSpent: 3280,
+            lastOrder: '2024-09-10',
+            dateAdded: '2023-03-22',
+            notes: 'Good quality canvases at competitive prices.',
+            products: ['Stretched Canvases', 'Canvas Panels', 'Primers'],
+            recentTransactions: [
+              { id: '1', date: '2024-09-10', amount: 320, items: 'Large canvas set (10 pieces)' },
+              { id: '2', date: '2024-08-05', amount: 180, items: 'Canvas panels bulk order' }
+            ]
+          },
+          {
+            id: '3',
+            name: 'Frame Masters',
+            contactPerson: 'Robert Chen',
+            email: 'robert@framemasters.com',
+            phone: '+1 (800) 555-0789',
+            address: '789 Frame Avenue, Gallery District, FL 33101',
+            website: 'www.framemasters.com',
+            supplierType: 'frames',
+            paymentTerms: 'Net 30',
+            rating: 4.9,
+            totalOrders: 15,
+            totalSpent: 4670,
+            lastOrder: '2024-09-05',
+            dateAdded: '2023-05-10',
+            notes: 'Specializes in custom framing. Excellent craftsmanship.',
+            products: ['Wooden Frames', 'Metal Frames', 'Custom Framing'],
+            recentTransactions: [
+              { id: '1', date: '2024-09-05', amount: 850, items: 'Custom frames for gallery show' },
+              { id: '2', date: '2024-07-18', amount: 620, items: 'Bulk order wooden frames' }
+            ]
+          }
+        ]);
       }
-    ]);
+    };
+    
+    loadSuppliers();
   }, []);
 
   const filteredSuppliers = suppliers.filter(supplier => {
@@ -147,29 +256,133 @@ export function SuppliersManager() {
     return matchesSearch && matchesType;
   });
 
-  const handleAddSupplier = () => {
+  const handleAddSupplier = async () => {
     if (newSupplier.name && newSupplier.email) {
-      const supplier: Supplier = {
-        id: Date.now().toString(),
-        name: newSupplier.name,
-        contactPerson: newSupplier.contactPerson || '',
+      const supplierData = {
+        company_name: newSupplier.name,
+        contact_person: newSupplier.contactPerson,
         email: newSupplier.email,
         phone: newSupplier.phone || '',
         address: newSupplier.address,
-        website: newSupplier.website,
-        supplierType: (newSupplier.supplierType as any) || 'general',
-        paymentTerms: newSupplier.paymentTerms || 'Net 30',
+        total_orders: 0,
+        total_spent: 0,
         rating: 0,
-        totalOrders: 0,
-        totalSpent: 0,
-        dateAdded: new Date().toISOString().split('T')[0],
-        notes: newSupplier.notes,
-        products: newSupplier.products || [],
-        recentTransactions: []
+        recent_transactions: []
       };
-      setSuppliers([...suppliers, supplier]);
-      setNewSupplier({ products: [], recentTransactions: [] });
-      setIsAddDialogOpen(false);
+
+      try {
+        // Insert directly into Supabase
+        const { data, error } = await supabase
+          .from('suppliers')
+          .insert([supplierData])
+          .select();
+
+        if (error) throw error;
+        
+        // Create the supplier object for the UI
+        const supplier: Supplier = {
+          id: data[0].id,
+          name: newSupplier.name,
+          contactPerson: newSupplier.contactPerson || '',
+          email: newSupplier.email,
+          phone: newSupplier.phone || '',
+          address: newSupplier.address,
+          website: newSupplier.website,
+          supplierType: (newSupplier.supplierType as any) || 'general',
+          paymentTerms: newSupplier.paymentTerms || 'Net 30',
+          rating: 0,
+          totalOrders: 0,
+          totalSpent: 0,
+          lastOrder: newSupplier.lastOrder,
+          dateAdded: new Date().toISOString().split('T')[0],
+          notes: newSupplier.notes,
+          products: newSupplier.products || [],
+          recentTransactions: []
+        };
+        
+        setSuppliers([...suppliers, supplier]);
+        setNewSupplier({ 
+          products: [], 
+          recentTransactions: [] 
+        });
+        setIsAddDialogOpen(false);
+      } catch (error) {
+        console.error('Error adding supplier:', error);
+        // Fallback to local state only if there's an error
+        const supplier: Supplier = {
+          id: Date.now().toString(),
+          name: newSupplier.name,
+          contactPerson: newSupplier.contactPerson || '',
+          email: newSupplier.email,
+          phone: newSupplier.phone || '',
+          address: newSupplier.address,
+          website: newSupplier.website,
+          supplierType: (newSupplier.supplierType as any) || 'general',
+          paymentTerms: newSupplier.paymentTerms || 'Net 30',
+          rating: 0,
+          totalOrders: 0,
+          totalSpent: 0,
+          lastOrder: newSupplier.lastOrder,
+          dateAdded: new Date().toISOString().split('T')[0],
+          notes: newSupplier.notes,
+          products: newSupplier.products || [],
+          recentTransactions: []
+        };
+        setSuppliers([...suppliers, supplier]);
+        setNewSupplier({ 
+          products: [], 
+          recentTransactions: [] 
+        });
+        setIsAddDialogOpen(false);
+      }
+    }
+  };
+
+  const handleUpdateSupplier = async (updatedSupplier: Supplier) => {
+    try {
+      // Update directly in Supabase
+      const { error } = await supabase
+        .from('suppliers')
+        .update({
+          company_name: updatedSupplier.name,
+          contact_person: updatedSupplier.contactPerson,
+          email: updatedSupplier.email,
+          phone: updatedSupplier.phone,
+          address: updatedSupplier.address,
+          total_orders: updatedSupplier.totalOrders,
+          total_spent: updatedSupplier.totalSpent,
+          rating: updatedSupplier.rating,
+          recent_transactions: updatedSupplier.recentTransactions
+        })
+        .eq('id', updatedSupplier.id);
+
+      if (error) throw error;
+      
+      // Update the local state
+      setSuppliers(suppliers.map(supplier => 
+        supplier.id === updatedSupplier.id ? updatedSupplier : supplier
+      ));
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+    }
+  };
+
+  const handleDeleteSupplier = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this supplier?')) return;
+    
+    try {
+      // Delete directly from Supabase
+      const { error } = await supabase
+        .from('suppliers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // Update the local state
+      setSuppliers(suppliers.filter(supplier => supplier.id !== id));
+    } catch (error) {
+      console.error('Error deleting supplier:', error);
     }
   };
 
@@ -268,6 +481,15 @@ export function SuppliersManager() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="supplierAddress" className="text-right">Address</Label>
+                <Input
+                  id="supplierAddress"
+                  value={newSupplier.address || ''}
+                  onChange={(e) => setNewSupplier({...newSupplier, address: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="supplierType" className="text-right">Type</Label>
                 <Select value={newSupplier.supplierType} onValueChange={(value) => setNewSupplier({...newSupplier, supplierType: value as any})}>
                   <SelectTrigger className="col-span-3">
@@ -306,6 +528,118 @@ export function SuppliersManager() {
             
             <DialogFooter>
               <Button onClick={handleAddSupplier}>Add Supplier</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Supplier Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Supplier</DialogTitle>
+              <DialogDescription>
+                Update the supplier's information.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editingSupplier && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editSupplierName" className="text-right">Company</Label>
+                  <Input
+                    id="editSupplierName"
+                    value={editingSupplier.name || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, name: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editContactPerson" className="text-right">Contact</Label>
+                  <Input
+                    id="editContactPerson"
+                    value={editingSupplier.contactPerson || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, contactPerson: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editSupplierEmail" className="text-right">Email</Label>
+                  <Input
+                    id="editSupplierEmail"
+                    type="email"
+                    value={editingSupplier.email || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, email: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editSupplierPhone" className="text-right">Phone</Label>
+                  <Input
+                    id="editSupplierPhone"
+                    value={editingSupplier.phone || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, phone: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editSupplierAddress" className="text-right">Address</Label>
+                  <Input
+                    id="editSupplierAddress"
+                    value={editingSupplier.address || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, address: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editSupplierType" className="text-right">Type</Label>
+                  <Select value={editingSupplier.supplierType} onValueChange={(value) => setEditingSupplier({...editingSupplier, supplierType: value as any})}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select supplier type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="paints">Paints</SelectItem>
+                      <SelectItem value="canvas">Canvas</SelectItem>
+                      <SelectItem value="frames">Frames</SelectItem>
+                      <SelectItem value="brushes">Brushes</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editPaymentTerms" className="text-right">Terms</Label>
+                  <Input
+                    id="editPaymentTerms"
+                    value={editingSupplier.paymentTerms || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, paymentTerms: e.target.value})}
+                    className="col-span-3"
+                    placeholder="e.g., Net 30"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editSupplierNotes" className="text-right">Notes</Label>
+                  <Textarea
+                    id="editSupplierNotes"
+                    value={editingSupplier.notes || ''}
+                    onChange={(e) => setEditingSupplier({...editingSupplier, notes: e.target.value})}
+                    className="col-span-3"
+                    placeholder="Any additional notes..."
+                  />
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (editingSupplier) {
+                  handleUpdateSupplier(editingSupplier);
+                  setIsEditDialogOpen(false);
+                }
+              }}>
+                Save Changes
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -428,8 +762,23 @@ export function SuppliersManager() {
                   <Eye className="h-3 w-3 mr-1" />
                   View
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setEditingSupplier({...supplier});
+                    setIsEditDialogOpen(true);
+                  }}
+                >
                   <Edit className="h-3 w-3" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => handleDeleteSupplier(supplier.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </CardContent>

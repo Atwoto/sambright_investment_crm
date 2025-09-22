@@ -1,39 +1,33 @@
-03:04:37.062 Running build in Washington, D.C., USA (East) – iad1
-03:04:37.063 Build machine configuration: 2 cores, 8 GB
-03:04:37.091 Cloning github.com/Atwoto/sambright_investment_crm (Branch: main, Commit: 0b82639)
-03:04:37.224 Previous build caches not available
-03:04:37.364 Cloning completed: 273.000ms
-03:04:37.670 Running "vercel build"
-03:04:38.052 Vercel CLI 48.0.2
-03:04:38.645 Installing dependencies...
-03:04:44.835 
-03:04:44.835 added 169 packages in 6s
-03:04:44.835 
-03:04:44.835 14 packages are looking for funding
-03:04:44.836   run `npm fund` for details
-03:04:45.000 
-03:04:45.000 > Inventory CRM for Art Sales@0.1.0 build
-03:04:45.001 > vite build
-03:04:45.002 
-03:04:45.289 [36mvite v6.3.5 [32mbuilding for production...[36m[39m
-03:04:45.351 transforming...
-03:04:45.373 [32m✓[39m 3 modules transformed.
-03:04:45.374 [31m✗[39m Build failed in 58ms
-03:04:45.374 [31merror during build:
-03:04:45.375 [31m[vite:css] Failed to load PostCSS config (searchPath: /vercel/path0): [Error] Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
-03:04:45.375 Require stack:
-03:04:45.376 - /vercel/path0/postcss.config.js
-03:04:45.376 
-03:04:45.377 (@/vercel/path0/postcss.config.js)
-03:04:45.378 Error: Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
-03:04:45.378 Require stack:
-03:04:45.378 - /vercel/path0/postcss.config.js
-03:04:45.378 
-03:04:45.378 (@/vercel/path0/postcss.config.js)
-03:04:45.378     at load (file:///vercel/path0/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:11776:11)
-03:04:45.378     at async Promise.all (index 0)
-03:04:45.378     at async plugins (file:///vercel/path0/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:11805:12)
-03:04:45.378     at async processResult (file:///vercel/path0/node_modules/vite/dist/node/chunks/dep-DBxKXgDP.js:11876:14)[31m
-03:04:45.378 file: [36m/vercel/path0/src/index.css[31m
-03:04:45.379 [39m
-03:04:45.395 Error: Command "npm run build" exited with 1
+create table public.products (
+  id uuid not null default gen_random_uuid (),
+  product_type character varying(50) not null,
+  sku character varying(100) null,
+  brand character varying(100) null,
+  name character varying(255) null,
+  size character varying(100) null,
+  color character varying(50) null,
+  unit_price numeric(10, 2) null,
+  supplier character varying(255) null,
+  stock_level integer null default 0,
+  min_stock_level integer null default 0,
+  category character varying(100) null,
+  title character varying(255) null,
+  artist character varying(255) null,
+  medium character varying(100) null,
+  price numeric(10, 2) null,
+  gallery_location character varying(255) null,
+  status character varying(50) null default 'available'::character varying,
+  date_created date null,
+  description text null,
+  created_at timestamp without time zone null default now(),
+  updated_at timestamp without time zone null default now(),
+  constraint products_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_products_type on public.products using btree (product_type) TABLESPACE pg_default;
+
+create index IF not exists idx_products_category on public.products using btree (category) TABLESPACE pg_default;
+
+create index IF not exists idx_products_status on public.products using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_products_stock on public.products using btree (stock_level) TABLESPACE pg_default;

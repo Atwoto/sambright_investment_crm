@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -51,72 +52,170 @@ export function ClientsManager() {
   const [selectedType, setSelectedType] = useState('all');
   const [clients, setClients] = useState<Client[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [newClient, setNewClient] = useState<Partial<Client>>({
     preferences: []
   });
 
   useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setClients([
-      {
-        id: '1',
-        name: 'Sarah Johnson',
-        company: 'Modern Interiors Design',
-        email: 'sarah@moderninteriors.com',
-        phone: '+1 (555) 123-4567',
-        address: '123 Design St, Art District, NY 10001',
-        clientType: 'commercial',
-        preferences: ['buying art', 'commissions'],
-        totalSpent: 3450,
-        lastPurchase: '2024-09-15',
-        dateAdded: '2024-01-15',
-        notes: 'Prefers contemporary pieces. Good repeat customer.',
-        purchaseHistory: [
-          { id: '1', date: '2024-09-15', amount: 850, items: 'Sunset Landscape painting' },
-          { id: '2', date: '2024-07-22', amount: 1200, items: 'Custom portrait commission' },
-          { id: '3', date: '2024-05-10', amount: 1400, items: 'Abstract series (3 pieces)' }
-        ]
-      },
-      {
-        id: '2',
-        name: 'David Chen',
-        email: 'david.chen@email.com',
-        phone: '+1 (555) 987-6543',
-        address: '456 Oak Avenue, Suburbia, CA 90210',
-        clientType: 'residential',
-        preferences: ['buying paints', 'art supplies'],
-        totalSpent: 1280,
-        lastPurchase: '2024-09-18',
-        dateAdded: '2024-03-08',
-        notes: 'Professional artist, bulk buyer of premium paints.',
-        purchaseHistory: [
-          { id: '1', date: '2024-09-18', amount: 320, items: 'Winsor & Newton oil paints set' },
-          { id: '2', date: '2024-08-05', amount: 580, items: 'Canvas and brushes bulk order' },
-          { id: '3', date: '2024-06-12', amount: 380, items: 'Acrylic paint supplies' }
-        ]
-      },
-      {
-        id: '3',
-        name: 'Maria Rodriguez',
-        company: 'Aurora Gallery',
-        email: 'maria@auroragallery.com',
-        phone: '+1 (555) 456-7890',
-        address: '789 Gallery Row, Arts Quarter, FL 33101',
-        clientType: 'gallery',
-        preferences: ['buying art', 'consignment'],
-        totalSpent: 5670,
-        lastPurchase: '2024-09-10',
-        dateAdded: '2023-11-20',
-        notes: 'Gallery owner, interested in consignment arrangements.',
-        purchaseHistory: [
-          { id: '1', date: '2024-09-10', amount: 2200, items: 'Landscape series (4 paintings)' },
-          { id: '2', date: '2024-06-15', amount: 1800, items: 'Portrait collection' },
-          { id: '3', date: '2024-02-28', amount: 1670, items: 'Abstract works' }
-        ]
+    // Load clients directly from Supabase
+    const loadClients = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const clientsFromDb = data.map(client => ({
+            id: client.id,
+            name: client.name,
+            company: client.company,
+            email: client.email,
+            phone: client.phone,
+            address: client.address,
+            clientType: client.client_type || 'residential',
+            preferences: [], // Not in your schema, using empty array
+            totalSpent: 0, // Not in your schema, using 0
+            lastPurchase: '', // Not in your schema, using empty string
+            dateAdded: client.created_at ? new Date(client.created_at).toISOString().split('T')[0] : '',
+            notes: client.notes || '',
+            purchaseHistory: [] // Not in your schema, using empty array
+          }));
+          
+          setClients(clientsFromDb);
+        } else {
+          // Seed demo content if DB empty
+          setClients([
+            {
+              id: '1',
+              name: 'Sarah Johnson',
+              company: 'Modern Interiors Design',
+              email: 'sarah@moderninteriors.com',
+              phone: '+1 (555) 123-4567',
+              address: '123 Design St, Art District, NY 10001',
+              clientType: 'commercial',
+              preferences: ['buying art', 'commissions'],
+              totalSpent: 3450,
+              lastPurchase: '2024-09-15',
+              dateAdded: '2024-01-15',
+              notes: 'Prefers contemporary pieces. Good repeat customer.',
+              purchaseHistory: [
+                { id: '1', date: '2024-09-15', amount: 850, items: 'Sunset Landscape painting' },
+                { id: '2', date: '2024-07-22', amount: 1200, items: 'Custom portrait commission' },
+                { id: '3', date: '2024-05-10', amount: 1400, items: 'Abstract series (3 pieces)' }
+              ]
+            },
+            {
+              id: '2',
+              name: 'David Chen',
+              company: '',
+              email: 'david.chen@email.com',
+              phone: '+1 (555) 987-6543',
+              address: '456 Oak Avenue, Suburbia, CA 90210',
+              clientType: 'residential',
+              preferences: ['buying paints', 'art supplies'],
+              totalSpent: 1280,
+              lastPurchase: '2024-09-18',
+              dateAdded: '2024-03-08',
+              notes: 'Professional artist, bulk buyer of premium paints.',
+              purchaseHistory: [
+                { id: '1', date: '2024-09-18', amount: 320, items: 'Winsor & Newton oil paints set' },
+                { id: '2', date: '2024-08-05', amount: 580, items: 'Canvas and brushes bulk order' },
+                { id: '3', date: '2024-06-12', amount: 380, items: 'Acrylic paint supplies' }
+              ]
+            },
+            {
+              id: '3',
+              name: 'Maria Rodriguez',
+              company: 'Aurora Gallery',
+              email: 'maria@auroragallery.com',
+              phone: '+1 (555) 456-7890',
+              address: '789 Gallery Row, Arts Quarter, FL 33101',
+              clientType: 'gallery',
+              preferences: ['buying art', 'consignment'],
+              totalSpent: 5670,
+              lastPurchase: '2024-09-10',
+              dateAdded: '2023-11-20',
+              notes: 'Gallery owner, interested in consignment arrangements.',
+              purchaseHistory: [
+                { id: '1', date: '2024-09-10', amount: 2200, items: 'Landscape series (4 paintings)' },
+                { id: '2', date: '2024-06-15', amount: 1800, items: 'Portrait collection' },
+                { id: '3', date: '2024-02-28', amount: 1670, items: 'Abstract works' }
+              ]
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading clients:', error);
+        // Fallback to seed data if there's an error
+        setClients([
+          {
+            id: '1',
+            name: 'Sarah Johnson',
+            company: 'Modern Interiors Design',
+            email: 'sarah@moderninteriors.com',
+            phone: '+1 (555) 123-4567',
+            address: '123 Design St, Art District, NY 10001',
+            clientType: 'commercial',
+            preferences: ['buying art', 'commissions'],
+            totalSpent: 3450,
+            lastPurchase: '2024-09-15',
+            dateAdded: '2024-01-15',
+            notes: 'Prefers contemporary pieces. Good repeat customer.',
+            purchaseHistory: [
+              { id: '1', date: '2024-09-15', amount: 850, items: 'Sunset Landscape painting' },
+              { id: '2', date: '2024-07-22', amount: 1200, items: 'Custom portrait commission' },
+              { id: '3', date: '2024-05-10', amount: 1400, items: 'Abstract series (3 pieces)' }
+            ]
+          },
+          {
+            id: '2',
+            name: 'David Chen',
+            company: '',
+            email: 'david.chen@email.com',
+            phone: '+1 (555) 987-6543',
+            address: '456 Oak Avenue, Suburbia, CA 90210',
+            clientType: 'residential',
+            preferences: ['buying paints', 'art supplies'],
+            totalSpent: 1280,
+            lastPurchase: '2024-09-18',
+            dateAdded: '2024-03-08',
+            notes: 'Professional artist, bulk buyer of premium paints.',
+            purchaseHistory: [
+              { id: '1', date: '2024-09-18', amount: 320, items: 'Winsor & Newton oil paints set' },
+              { id: '2', date: '2024-08-05', amount: 580, items: 'Canvas and brushes bulk order' },
+              { id: '3', date: '2024-06-12', amount: 380, items: 'Acrylic paint supplies' }
+            ]
+          },
+          {
+            id: '3',
+            name: 'Maria Rodriguez',
+            company: 'Aurora Gallery',
+            email: 'maria@auroragallery.com',
+            phone: '+1 (555) 456-7890',
+            address: '789 Gallery Row, Arts Quarter, FL 33101',
+            clientType: 'gallery',
+            preferences: ['buying art', 'consignment'],
+            totalSpent: 5670,
+            lastPurchase: '2024-09-10',
+            dateAdded: '2023-11-20',
+            notes: 'Gallery owner, interested in consignment arrangements.',
+            purchaseHistory: [
+              { id: '1', date: '2024-09-10', amount: 2200, items: 'Landscape series (4 paintings)' },
+              { id: '2', date: '2024-06-15', amount: 1800, items: 'Portrait collection' },
+              { id: '3', date: '2024-02-28', amount: 1670, items: 'Abstract works' }
+            ]
+          }
+        ]);
       }
-    ]);
+    };
+    
+    loadClients();
   }, []);
 
   const filteredClients = clients.filter(client => {
@@ -127,25 +226,115 @@ export function ClientsManager() {
     return matchesSearch && matchesType;
   });
 
-  const handleAddClient = () => {
+  const handleAddClient = async () => {
     if (newClient.name && newClient.email) {
-      const client: Client = {
-        id: Date.now().toString(),
+      const clientData = {
         name: newClient.name,
-        company: newClient.company,
+        company: newClient.company || '',
         email: newClient.email,
         phone: newClient.phone || '',
-        address: newClient.address,
-        clientType: (newClient.clientType as any) || 'residential',
-        preferences: newClient.preferences || [],
-        totalSpent: 0,
-        dateAdded: new Date().toISOString().split('T')[0],
-        notes: newClient.notes,
-        purchaseHistory: []
+        address: newClient.address || '',
+        client_type: newClient.clientType || 'residential',
+        notes: newClient.notes || ''
       };
-      setClients([...clients, client]);
-      setNewClient({ preferences: [] });
-      setIsAddDialogOpen(false);
+
+      try {
+        // Insert directly into Supabase
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([clientData])
+          .select();
+
+        if (error) throw error;
+        
+        // Create the client object for the UI
+        const client: Client = {
+          id: data[0].id,
+          name: newClient.name,
+          company: newClient.company || '',
+          email: newClient.email,
+          phone: newClient.phone || '',
+          address: newClient.address || '',
+          clientType: (newClient.clientType as any) || 'residential',
+          preferences: newClient.preferences || [],
+          totalSpent: 0,
+          dateAdded: new Date().toISOString().split('T')[0],
+          notes: newClient.notes || '',
+          purchaseHistory: [],
+          lastPurchase: ''
+        };
+        
+        setClients([...clients, client]);
+        setNewClient({ preferences: [] });
+        setIsAddDialogOpen(false);
+      } catch (error) {
+        console.error('Error adding client:', error);
+        // Fallback to local state only if there's an error
+        const client: Client = {
+          id: Date.now().toString(),
+          name: newClient.name,
+          company: newClient.company || '',
+          email: newClient.email,
+          phone: newClient.phone || '',
+          address: newClient.address || '',
+          clientType: (newClient.clientType as any) || 'residential',
+          preferences: newClient.preferences || [],
+          totalSpent: 0,
+          dateAdded: new Date().toISOString().split('T')[0],
+          notes: newClient.notes || '',
+          purchaseHistory: [],
+          lastPurchase: ''
+        };
+        setClients([...clients, client]);
+        setNewClient({ preferences: [] });
+        setIsAddDialogOpen(false);
+      }
+    }
+  };
+
+  const handleUpdateClient = async (updatedClient: Client) => {
+    try {
+      // Update directly in Supabase
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          name: updatedClient.name,
+          company: updatedClient.company || '',
+          email: updatedClient.email,
+          phone: updatedClient.phone,
+          address: updatedClient.address || '',
+          client_type: updatedClient.clientType,
+          notes: updatedClient.notes || ''
+        })
+        .eq('id', updatedClient.id);
+
+      if (error) throw error;
+      
+      // Update the local state
+      setClients(clients.map(client => 
+        client.id === updatedClient.id ? updatedClient : client
+      ));
+    } catch (error) {
+      console.error('Error updating client:', error);
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this client?')) return;
+    
+    try {
+      // Delete directly from Supabase
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // Update the local state
+      setClients(clients.filter(client => client.id !== id));
+    } catch (error) {
+      console.error('Error deleting client:', error);
     }
   };
 
@@ -226,6 +415,15 @@ export function ClientsManager() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="clientAddress" className="text-right">Address</Label>
+                <Input
+                  id="clientAddress"
+                  value={newClient.address || ''}
+                  onChange={(e) => setNewClient({...newClient, address: e.target.value})}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="clientType" className="text-right">Type</Label>
                 <Select value={newClient.clientType} onValueChange={(value) => setNewClient({...newClient, clientType: value as any})}>
                   <SelectTrigger className="col-span-3">
@@ -254,6 +452,109 @@ export function ClientsManager() {
             
             <DialogFooter>
               <Button onClick={handleAddClient}>Add Client</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Client Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Client</DialogTitle>
+              <DialogDescription>
+                Update the client's information.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editingClient && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editClientName" className="text-right">Name</Label>
+                  <Input
+                    id="editClientName"
+                    value={editingClient.name || ''}
+                    onChange={(e) => setEditingClient({...editingClient, name: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editCompany" className="text-right">Company</Label>
+                  <Input
+                    id="editCompany"
+                    value={editingClient.company || ''}
+                    onChange={(e) => setEditingClient({...editingClient, company: e.target.value})}
+                    className="col-span-3"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editClientEmail" className="text-right">Email</Label>
+                  <Input
+                    id="editClientEmail"
+                    type="email"
+                    value={editingClient.email || ''}
+                    onChange={(e) => setEditingClient({...editingClient, email: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editClientPhone" className="text-right">Phone</Label>
+                  <Input
+                    id="editClientPhone"
+                    value={editingClient.phone || ''}
+                    onChange={(e) => setEditingClient({...editingClient, phone: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editClientAddress" className="text-right">Address</Label>
+                  <Input
+                    id="editClientAddress"
+                    value={editingClient.address || ''}
+                    onChange={(e) => setEditingClient({...editingClient, address: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editClientType" className="text-right">Type</Label>
+                  <Select value={editingClient.clientType} onValueChange={(value) => setEditingClient({...editingClient, clientType: value as any})}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select client type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="residential">Residential</SelectItem>
+                      <SelectItem value="commercial">Commercial</SelectItem>
+                      <SelectItem value="industrial">Industrial</SelectItem>
+                      <SelectItem value="government">Government</SelectItem>
+                      <SelectItem value="gallery">Gallery</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="editClientNotes" className="text-right">Notes</Label>
+                  <Textarea
+                    id="editClientNotes"
+                    value={editingClient.notes || ''}
+                    onChange={(e) => setEditingClient({...editingClient, notes: e.target.value})}
+                    className="col-span-3"
+                    placeholder="Any additional notes..."
+                  />
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (editingClient) {
+                  handleUpdateClient(editingClient);
+                  setIsEditDialogOpen(false);
+                }
+              }}>
+                Save Changes
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -367,8 +668,23 @@ export function ClientsManager() {
                   <Eye className="h-3 w-3 mr-1" />
                   View
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setEditingClient({...client});
+                    setIsEditDialogOpen(true);
+                  }}
+                >
                   <Edit className="h-3 w-3" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => handleDeleteClient(client.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </CardContent>
