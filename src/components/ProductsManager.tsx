@@ -41,6 +41,7 @@ import {
 import { toast } from "sonner";
 import { API_BASE } from "../utils/api";
 import { formatCurrency } from "../utils/currency";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Paint {
   id: string;
@@ -71,6 +72,7 @@ interface Painting {
 }
 
 export function ProductsManager() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("paints");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -149,6 +151,40 @@ export function ProductsManager() {
     loadProducts();
   }, []);
 
+  // Helper function to create inventory transaction
+  const createInventoryTransaction = async (
+    productId: string,
+    productName: string,
+    productType: "paint" | "painting",
+    quantity: number,
+    unitCost: number,
+    reason: string,
+    supplierName?: string
+  ) => {
+    try {
+      const transactionData = {
+        transaction_number: `TXN-${new Date().getFullYear()}-${String(
+          Math.floor(Math.random() * 1000)
+        ).padStart(3, "0")}`,
+        type: "stock_in",
+        product_id: productId,
+        product_name: productName,
+        product_type: productType,
+        quantity: quantity,
+        unit_cost: unitCost,
+        total_cost: unitCost * quantity,
+        reason: reason,
+        supplier_name: supplierName || "",
+        created_by: user?.name || user?.email || "System",
+        created_at: new Date().toISOString(),
+      };
+
+      await supabase.from("inventory_transactions").insert([transactionData]);
+    } catch (error) {
+      console.error("Error creating inventory transaction:", error);
+    }
+  };
+
   const filteredPaints = paints.filter((paint) => {
     const matchesSearch =
       paint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -219,6 +255,19 @@ export function ProductsManager() {
           setPaints((prev) =>
             prev.map((p) => (p.id === paint.id ? { ...p, id: data[0].id } : p))
           );
+
+          // Create inventory transaction for initial stock
+          if (paint.stockLevel > 0) {
+            await createInventoryTransaction(
+              data[0].id,
+              paint.name,
+              "paint",
+              paint.stockLevel,
+              paint.unitPrice,
+              "Initial stock - Product added",
+              paint.supplier
+            );
+          }
         }
 
         toast.success("Paint added successfully", { id: loadingId });

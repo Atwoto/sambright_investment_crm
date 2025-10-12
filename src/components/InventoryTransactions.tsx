@@ -28,6 +28,7 @@ import {
 } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/currency";
 import { toast } from "sonner";
 import {
@@ -69,20 +70,43 @@ interface InventoryTransaction {
 }
 
 export function InventoryTransactions() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedDateRange, setSelectedDateRange] = useState("all");
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
+  const [suppliers, setSuppliers] = useState<
+    Array<{ id: string; company_name: string }>
+  >([]);
+  const [products, setProducts] = useState<
+    Array<{ id: string; name: string; product_type: string }>
+  >([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState<
     Partial<InventoryTransaction>
   >({});
 
   useEffect(() => {
-    // Load transactions from Supabase
-    const loadTransactions = async () => {
+    // Load transactions, suppliers, and products from Supabase
+    const loadData = async () => {
       try {
-        // First load inventory transactions
+        // Load suppliers
+        const { data: suppliersData } = await supabase
+          .from("suppliers")
+          .select("id, company_name")
+          .order("company_name");
+
+        if (suppliersData) setSuppliers(suppliersData);
+
+        // Load products
+        const { data: productsData } = await supabase
+          .from("products")
+          .select("id, name, product_type")
+          .order("name");
+
+        if (productsData) setProducts(productsData);
+
+        // Load inventory transactions
         const { data: transactionsData, error: transactionsError } =
           await supabase
             .from("inventory_transactions")
@@ -144,7 +168,7 @@ export function InventoryTransactions() {
       }
     };
 
-    loadTransactions();
+    loadData();
   }, []);
 
   const filteredTransactions = transactions.filter((transaction) => {
@@ -212,7 +236,7 @@ export function InventoryTransactions() {
         supplier_name: newTransaction.supplierName || "",
         client_id: newTransaction.clientId || null,
         client_name: newTransaction.clientName || "",
-        created_by: "Manual Entry",
+        created_by: user?.name || user?.email || "System",
         created_at: new Date().toISOString(),
       };
 
@@ -284,7 +308,7 @@ export function InventoryTransactions() {
               : undefined,
           reason: newTransaction.reason || "",
           dateCreated: new Date().toISOString().split("T")[0],
-          createdBy: "Manual Entry",
+          createdBy: user?.name || user?.email || "System",
           notes: newTransaction.notes,
         };
         setTransactions([transaction, ...transactions]);
@@ -549,8 +573,36 @@ export function InventoryTransactions() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="productName" className="text-right">
+                <Label htmlFor="product" className="text-right">
                   Product
+                </Label>
+                <Select
+                  value={newTransaction.productId}
+                  onValueChange={(value) => {
+                    const product = products.find((p) => p.id === value);
+                    setNewTransaction({
+                      ...newTransaction,
+                      productId: value,
+                      productName: product?.name || "",
+                      productType: (product?.product_type as any) || "paint",
+                    });
+                  }}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} ({product.product_type})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="productName" className="text-right">
+                  Or Manual
                 </Label>
                 <Input
                   id="productName"
@@ -624,6 +676,35 @@ export function InventoryTransactions() {
                   placeholder="Optional"
                 />
               </div>
+              {newTransaction.type === "stock_in" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="supplier" className="text-right">
+                    Supplier
+                  </Label>
+                  <Select
+                    value={newTransaction.supplierId}
+                    onValueChange={(value) => {
+                      const supplier = suppliers.find((s) => s.id === value);
+                      setNewTransaction({
+                        ...newTransaction,
+                        supplierId: value,
+                        supplierName: supplier?.company_name || "",
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select supplier (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.company_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="reason" className="text-right">
                   Reason
@@ -722,7 +803,7 @@ export function InventoryTransactions() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalValue.toLocaleString()}
+              {formatCurrency(totalValue)}
             </div>
             <p className="text-xs text-muted-foreground">Transaction value</p>
           </CardContent>
