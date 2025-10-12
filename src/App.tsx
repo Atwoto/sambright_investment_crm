@@ -298,8 +298,8 @@ export default function App() {
           className="space-y-8"
         >
           {/* Desktop Navigation */}
-          <div className="hidden sm:block">
-            <TabsList className="grid w-full grid-cols-8 lg:w-fit bg-white/80 backdrop-blur-sm border shadow-sm">
+          <div className="hidden sm:block overflow-x-auto">
+            <TabsList className="inline-flex bg-white/80 backdrop-blur-sm border shadow-sm">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 return (
