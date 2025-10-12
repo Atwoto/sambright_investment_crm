@@ -26,31 +26,40 @@ export interface PrintableOrder {
 
 // You can tweak these to customize the header text without touching code elsewhere
 export const COMPANY = {
-  name: 'SAMBRIGHT INVESTMENT LIMITED',
-  addressLine: 'Thika Road, Ruiru, Kiambu District',
-  phone: '+254 708 783 091',
-  email: 'sambrightlimited@gmail.com',
-  watermarkText: 'SIL'
+  name: "SAMBRIGHT INVESTMENT LIMITED",
+  addressLine: "Thika Road, Ruiru, Kiambu District",
+  phone: "+254 708 783 091",
+  email: "sambrightlimited@gmail.com",
+  watermarkText: "SIL",
 };
 
 export function createOrderLetterheadHTML(order: PrintableOrder) {
-  const safe = (s: string) => String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  const safe = (s: string) =>
+    String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
-  const itemsRows = order.items.map(item => `
+  const formatKsh = (amount: number) =>
+    `KSh ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+  const itemsRows = order.items
+    .map(
+      (item) => `
       <tr>
         <td>${safe(item.productName)}</td>
         <td>${safe(item.productType)}</td>
         <td class="num">${item.quantity}</td>
-        <td class="num">${item.unitPrice.toFixed(2)}</td>
-        <td class="num">${item.totalPrice.toFixed(2)}</td>
+        <td class="num">${formatKsh(item.unitPrice)}</td>
+        <td class="num">${formatKsh(item.totalPrice)}</td>
       </tr>
-  `).join('');
+  `
+    )
+    .join("");
 
   const typeTitle = order.type.charAt(0).toUpperCase() + order.type.slice(1);
-  const statusTitle = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+  const statusTitle =
+    order.status.charAt(0).toUpperCase() + order.status.slice(1);
 
   return `<!DOCTYPE html>
   <html lang="en">
@@ -113,7 +122,9 @@ export function createOrderLetterheadHTML(order: PrintableOrder) {
           <div>
             <div class="title">${COMPANY.name}</div>
             <div class="contact">
-              ${COMPANY.addressLine}, Tel: <span class="muted">${COMPANY.phone}</span><br/>
+              ${COMPANY.addressLine}, Tel: <span class="muted">${
+    COMPANY.phone
+  }</span><br/>
               Email: <span class="muted">${COMPANY.email}</span>
             </div>
           </div>
@@ -133,7 +144,13 @@ export function createOrderLetterheadHTML(order: PrintableOrder) {
           <h3>${safe(typeTitle)} Details</h3>
           <div><strong>${safe(order.orderNumber)}</strong></div>
           <div>Date: ${new Date(order.dateCreated).toLocaleDateString()}</div>
-          ${order.dueDate ? `<div>Due: ${new Date(order.dueDate).toLocaleDateString()}</div>` : ''}
+          ${
+            order.dueDate
+              ? `<div>Due: ${new Date(
+                  order.dueDate
+                ).toLocaleDateString()}</div>`
+              : ""
+          }
           <div>Status: ${safe(statusTitle)}</div>
         </div>
       </div>
@@ -156,12 +173,24 @@ export function createOrderLetterheadHTML(order: PrintableOrder) {
 
         <div class="totals">
           <div class="totals-row header"><span>Summary</span><span></span></div>
-          <div class="totals-row"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}</span></div>
-          <div class="totals-row"><span>Tax</span><span>${order.tax.toFixed(2)}</span></div>
-          <div class="totals-row total"><span>Total</span><span>${order.total.toFixed(2)}</span></div>
+          <div class="totals-row"><span>Subtotal</span><span>${formatKsh(
+            order.subtotal
+          )}</span></div>
+          <div class="totals-row"><span>Tax</span><span>${formatKsh(
+            order.tax
+          )}</span></div>
+          <div class="totals-row total"><span>Total</span><span>${formatKsh(
+            order.total
+          )}</span></div>
         </div>
 
-        ${order.notes ? `<div class="notes box"><h3>Notes</h3><div>${safe(order.notes)}</div></div>` : ''}
+        ${
+          order.notes
+            ? `<div class="notes box"><h3>Notes</h3><div>${safe(
+                order.notes
+              )}</div></div>`
+            : ""
+        }
       </div>
 
       <div class="footer-bar"></div>

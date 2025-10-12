@@ -1,22 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../utils/supabase/client';
-import { toast } from 'sonner';
-import { createOrderLetterheadHTML } from '../utils/orderPrintTemplate';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
+import React, { useState, useEffect } from "react";
+import { supabase } from "../utils/supabase/client";
+import { toast } from "sonner";
+import { createOrderLetterheadHTML } from "../utils/orderPrintTemplate";
+import { formatCurrency } from "../utils/currency";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Badge } from "./ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
   Eye,
   ShoppingCart,
   FileText,
@@ -31,14 +52,14 @@ import {
   AlertCircle,
   Download,
   Printer,
-  Mail
-} from 'lucide-react';
+  Mail,
+} from "lucide-react";
 
 interface OrderItem {
   id: string;
   productId: string;
   productName: string;
-  productType: 'paint' | 'painting';
+  productType: "paint" | "painting";
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -47,7 +68,7 @@ interface OrderItem {
 interface Order {
   id: string;
   orderNumber: string;
-  type: 'quote' | 'sale' | 'invoice';
+  type: "quote" | "sale" | "invoice";
   clientId: string;
   clientName: string;
   clientEmail: string;
@@ -55,8 +76,8 @@ interface Order {
   subtotal: number;
   tax: number;
   total: number;
-  status: 'draft' | 'sent' | 'accepted' | 'completed' | 'cancelled';
-  paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
+  status: "draft" | "sent" | "accepted" | "completed" | "cancelled";
+  paymentStatus: "pending" | "partial" | "paid" | "overdue";
   paymentMethod?: string;
   dateCreated: string;
   notes?: string;
@@ -67,9 +88,9 @@ interface Order {
 }
 
 export function OrdersManager() {
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -80,10 +101,20 @@ export function OrdersManager() {
     items: [],
     subtotal: 0,
     tax: 0,
-    total: 0
+    total: 0,
   });
-  const [newItem, setNewItem] = useState<Partial<OrderItem>>({ productName: '', productType: 'painting', quantity: 1, unitPrice: 0 });
-  const [editItem, setEditItem] = useState<Partial<OrderItem>>({ productName: '', productType: 'painting', quantity: 1, unitPrice: 0 });
+  const [newItem, setNewItem] = useState<Partial<OrderItem>>({
+    productName: "",
+    productType: "painting",
+    quantity: 1,
+    unitPrice: 0,
+  });
+  const [editItem, setEditItem] = useState<Partial<OrderItem>>({
+    productName: "",
+    productType: "painting",
+    quantity: 1,
+    unitPrice: 0,
+  });
   const [creating, setCreating] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -92,307 +123,141 @@ export function OrdersManager() {
     // Load orders from Supabase
     const loadOrders = async () => {
       try {
-        console.log('Attempting to load orders from Supabase...');
+        console.log("Attempting to load orders from Supabase...");
         const { data, error } = await supabase
-          .from('orders')
-          .select('*');
-        
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false });
+
         if (error) {
-          console.error('Supabase error:', error);
-          throw error;
+          console.error("Supabase error:", error);
+          toast.error("Failed to load orders from database");
+          setOrders([]);
+          return;
         }
-        
-        console.log('Supabase data:', data);
-        
-        // If we have data from Supabase, use it
-        // Otherwise, use the mock data (for backward compatibility)
-        if (data && data.length > 0) {
-          console.log(`Found ${data.length} orders in database`);
-          // Map Supabase data to our Order interface
-          const mappedOrders = data.map(order => ({
-            id: order.id,
-            orderNumber: order.order_number,
-            type: order.order_type || 'sale',
-            clientId: order.client_id || '',
-            clientName: 'Client Name', // Would need to join with clients table
-            clientEmail: 'client@example.com', // Would need to join with clients table
-            items: order.items || [],
-            subtotal: order.total ? order.total - (order.tax || 0) : 0,
-            tax: order.tax || 0,
-            total: order.total || 0,
-            status: order.status || 'draft',
-            paymentStatus: 'pending', // Default value
-            paymentMethod: '', // Default value
-            dateCreated: order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            dueDate: order.due_date || '', // Map due_date from database
-            notes: order.notes || '',
-            discount: order.discount || 0,
-            shippingAddress: order.shipping_address || '',
-            billingAddress: order.billing_address || ''
-          }));
-          
-          setOrders(mappedOrders);
-        } else {
-          console.log('No orders in database, using mock data');
-          // Use mock data if no data in database
-          setOrders([
-            {
-              id: '1',
-              orderNumber: 'ORD-2024-001',
-              type: 'sale',
-              clientId: '1',
-              clientName: 'Sarah Johnson',
-              clientEmail: 'sarah@moderninteriors.com',
-              items: [
-                {
-                  id: '1',
-                  productId: 'p1',
-                  productName: 'Sunset Landscape',
-                  productType: 'painting',
-                  quantity: 1,
-                  unitPrice: 850,
-                  totalPrice: 850
-                }
-              ],
-              subtotal: 850,
-              tax: 68,
-              total: 918,
-              status: 'completed',
-              paymentStatus: 'paid',
-              paymentMethod: 'Credit Card',
-              dateCreated: '2024-09-15',
-              dueDate: '2024-09-15',
-              notes: 'Client loved the piece, immediate purchase.'
-            },
-            {
-              id: '2',
-              orderNumber: 'QUO-2024-002',
-              type: 'quote',
-              clientId: '2',
-              clientName: 'David Chen',
-              clientEmail: 'david.chen@email.com',
-              items: [
-                {
-                  id: '1',
-                  productId: 'p2',
-                  productName: 'Winsor & Newton Oil Paint Set',
-                  productType: 'paint',
-                  quantity: 2,
-                  unitPrice: 120,
-                  totalPrice: 240
-                },
-                {
-                  id: '2',
-                  productId: 'p3',
-                  productName: 'Professional Brushes',
-                  productType: 'paint',
-                  quantity: 1,
-                  unitPrice: 85,
-                  totalPrice: 85
-                }
-              ],
-              subtotal: 325,
-              tax: 26,
-              total: 351,
-              status: 'sent',
-              paymentStatus: 'pending',
-              dateCreated: '2024-09-18',
-              dueDate: '2024-10-18',
-              notes: 'Bulk order discount applied. Client considering purchase.'
-            },
-            {
-              id: '3',
-              orderNumber: 'INV-2024-003',
-              type: 'invoice',
-              clientId: '3',
-              clientName: 'Maria Rodriguez',
-              clientEmail: 'maria@auroragallery.com',
-              items: [
-                {
-                  id: '1',
-                  productId: 'p4',
-                  productName: 'Abstract Art Collection',
-                  productType: 'painting',
-                  quantity: 4,
-                  unitPrice: 650,
-                  totalPrice: 2600
-                }
-              ],
-              subtotal: 2600,
-              tax: 208,
-              total: 2808,
-              status: 'accepted',
-              paymentStatus: 'overdue',
-              paymentMethod: 'Bank Transfer',
-              dateCreated: '2024-08-15',
-              dueDate: '2024-09-15',
-              notes: 'Gallery consignment agreement. Payment overdue by 3 days.'
-            }
-          ]);
-        }
+
+        console.log("Supabase data:", data);
+
+        // Map Supabase data to our Order interface
+        const mappedOrders = (data || []).map((order) => ({
+          id: order.id,
+          orderNumber: order.order_number,
+          type: order.order_type || "sale",
+          clientId: order.client_id || "",
+          clientName: "Client Name", // Would need to join with clients table
+          clientEmail: "client@example.com", // Would need to join with clients table
+          items: order.items || [],
+          subtotal: order.total ? order.total - (order.tax || 0) : 0,
+          tax: order.tax || 0,
+          total: order.total || 0,
+          status: order.status || "draft",
+          paymentStatus: "pending", // Default value
+          paymentMethod: "", // Default value
+          dateCreated: order.created_at
+            ? new Date(order.created_at).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
+          dueDate: order.due_date || "", // Map due_date from database
+          notes: order.notes || "",
+          discount: order.discount || 0,
+          shippingAddress: order.shipping_address || "",
+          billingAddress: order.billing_address || "",
+        }));
+
+        setOrders(mappedOrders);
+        console.log(`Loaded ${mappedOrders.length} orders from database`);
       } catch (error) {
-        console.error('Error loading orders from Supabase:', error);
-        console.error('This might be due to database connection issues or table structure problems');
-        // Fallback to mock data on error
-        setOrders([
-          {
-            id: '1',
-            orderNumber: 'ORD-2024-001',
-            type: 'sale',
-            clientId: '1',
-            clientName: 'Sarah Johnson',
-            clientEmail: 'sarah@moderninteriors.com',
-            items: [
-              {
-                id: '1',
-                productId: 'p1',
-                productName: 'Sunset Landscape',
-                productType: 'painting',
-                quantity: 1,
-                unitPrice: 850,
-                totalPrice: 850
-              }
-            ],
-            subtotal: 850,
-            tax: 68,
-            total: 918,
-            status: 'completed',
-            paymentStatus: 'paid',
-            paymentMethod: 'Credit Card',
-            dateCreated: '2024-09-15',
-            dueDate: '2024-09-15',
-            notes: 'Client loved the piece, immediate purchase.'
-          },
-          {
-            id: '2',
-            orderNumber: 'QUO-2024-002',
-            type: 'quote',
-            clientId: '2',
-            clientName: 'David Chen',
-            clientEmail: 'david.chen@email.com',
-            items: [
-              {
-                id: '1',
-                productId: 'p2',
-                productName: 'Winsor & Newton Oil Paint Set',
-                productType: 'paint',
-                quantity: 2,
-                unitPrice: 120,
-                totalPrice: 240
-              },
-              {
-                id: '2',
-                productId: 'p3',
-                productName: 'Professional Brushes',
-                productType: 'paint',
-                quantity: 1,
-                unitPrice: 85,
-                totalPrice: 85
-              }
-            ],
-            subtotal: 325,
-            tax: 26,
-            total: 351,
-            status: 'sent',
-            paymentStatus: 'pending',
-            dateCreated: '2024-09-18',
-            dueDate: '2024-10-18',
-            notes: 'Bulk order discount applied. Client considering purchase.'
-          },
-          {
-            id: '3',
-            orderNumber: 'INV-2024-003',
-            type: 'invoice',
-            clientId: '3',
-            clientName: 'Maria Rodriguez',
-            clientEmail: 'maria@auroragallery.com',
-            items: [
-              {
-                id: '1',
-                productId: 'p4',
-                productName: 'Abstract Art Collection',
-                productType: 'painting',
-                quantity: 4,
-                unitPrice: 650,
-                totalPrice: 2600
-              }
-            ],
-            subtotal: 2600,
-            tax: 208,
-            total: 2808,
-            status: 'accepted',
-            paymentStatus: 'overdue',
-            paymentMethod: 'Bank Transfer',
-            dateCreated: '2024-08-15',
-            dueDate: '2024-09-15',
-            notes: 'Gallery consignment agreement. Payment overdue by 3 days.'
-          }
-        ]);
+        console.error("Error loading orders from Supabase:", error);
+        toast.error("Failed to load orders");
+        setOrders([]);
       }
     };
-    
+
     loadOrders();
   }, []);
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.clientEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
-    const matchesTab = activeTab === 'all' || order.type === activeTab;
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.clientEmail.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "all" || order.status === selectedStatus;
+    const matchesTab = activeTab === "all" || order.type === activeTab;
     return matchesSearch && matchesStatus && matchesTab;
   });
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      draft: 'secondary',
-      sent: 'outline',
-      accepted: 'default',
-      completed: 'default',
-      cancelled: 'destructive'
+      draft: "secondary",
+      sent: "outline",
+      accepted: "default",
+      completed: "default",
+      cancelled: "destructive",
     } as const;
     const colors = {
-      draft: 'text-gray-600',
-      sent: 'text-blue-600',
-      accepted: 'text-green-600',
-      completed: 'text-green-700',
-      cancelled: 'text-red-600'
+      draft: "text-gray-600",
+      sent: "text-blue-600",
+      accepted: "text-green-600",
+      completed: "text-green-700",
+      cancelled: "text-red-600",
     };
-    return <Badge variant={variants[status as keyof typeof variants] || 'outline'} className={colors[status as keyof typeof colors] || ''}>{status}</Badge>;
+    return (
+      <Badge
+        variant={variants[status as keyof typeof variants] || "outline"}
+        className={colors[status as keyof typeof colors] || ""}
+      >
+        {status}
+      </Badge>
+    );
   };
 
   const getPaymentStatusBadge = (status: string) => {
     const variants = {
-      pending: 'secondary',
-      partial: 'outline',
-      paid: 'default',
-      overdue: 'destructive'
+      pending: "secondary",
+      partial: "outline",
+      paid: "default",
+      overdue: "destructive",
     } as const;
-    return <Badge variant={variants[status as keyof typeof variants] || 'outline'}>{status}</Badge>;
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || "outline"}>
+        {status}
+      </Badge>
+    );
   };
 
   const getOrderTypeIcon = (type: string) => {
     switch (type) {
-      case 'quote': return <FileText className="h-4 w-4" />;
-      case 'invoice': return <CreditCard className="h-4 w-4" />;
-      case 'sale': return <ShoppingCart className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
+      case "quote":
+        return <FileText className="h-4 w-4" />;
+      case "invoice":
+        return <CreditCard className="h-4 w-4" />;
+      case "sale":
+        return <ShoppingCart className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'cancelled': return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'accepted': return <CheckCircle className="h-4 w-4 text-blue-600" />;
-      case 'sent': return <Clock className="h-4 w-4 text-orange-600" />;
-      default: return <AlertCircle className="h-4 w-4 text-gray-600" />;
+      case "completed":
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case "cancelled":
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case "accepted":
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
+      case "sent":
+        return <Clock className="h-4 w-4 text-orange-600" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-600" />;
     }
   };
 
   const isOverdue = (order: Order) => {
     if (!order.dueDate) return false;
-    return new Date(order.dueDate) < new Date() && order.paymentStatus !== 'paid';
+    return (
+      new Date(order.dueDate) < new Date() && order.paymentStatus !== "paid"
+    );
   };
 
   // Helpers for totals and items (create)
@@ -406,40 +271,49 @@ export function OrdersManager() {
     if (!newItem.productName) return;
     const item: OrderItem = {
       id: `${Date.now()}`,
-      productId: '',
+      productId: "",
       productName: newItem.productName!,
-      productType: (newItem.productType as any) || 'painting',
+      productType: (newItem.productType as any) || "painting",
       quantity: Number(newItem.quantity) || 1,
       unitPrice: Number(newItem.unitPrice) || 0,
-      totalPrice: (Number(newItem.quantity) || 1) * (Number(newItem.unitPrice) || 0)
+      totalPrice:
+        (Number(newItem.quantity) || 1) * (Number(newItem.unitPrice) || 0),
     };
-    const items = [ ...(newOrder.items as OrderItem[]), item ];
+    const items = [...(newOrder.items as OrderItem[]), item];
     const { subtotal, total } = recalcTotals(items, Number(newOrder.tax) || 0);
     setNewOrder({ ...newOrder, items, subtotal, total });
-    setNewItem({ productName: '', productType: newItem.productType || 'painting', quantity: 1, unitPrice: 0 });
+    setNewItem({
+      productName: "",
+      productType: newItem.productType || "painting",
+      quantity: 1,
+      unitPrice: 0,
+    });
   };
 
   const removeItemFromNewOrder = (id: string) => {
-    const items = (newOrder.items as OrderItem[]).filter(i => i.id !== id);
+    const items = (newOrder.items as OrderItem[]).filter((i) => i.id !== id);
     const { subtotal, total } = recalcTotals(items, Number(newOrder.tax) || 0);
     setNewOrder({ ...newOrder, items, subtotal, total });
   };
 
   const updateNewTax = (value: number) => {
-    const { subtotal, total } = recalcTotals((newOrder.items as OrderItem[]) || [], value || 0);
+    const { subtotal, total } = recalcTotals(
+      (newOrder.items as OrderItem[]) || [],
+      value || 0
+    );
     setNewOrder({ ...newOrder, tax: value || 0, subtotal, total });
   };
 
   const genOrderNumber = (type: string) => {
-    const prefix = (type || 'ord').slice(0,3).toUpperCase();
-    const rand = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    const prefix = (type || "ord").slice(0, 3).toUpperCase();
+    const rand = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
     return `${prefix}-${new Date().getFullYear()}-${rand}`;
   };
 
   const handleCreateOrder = async () => {
     if (!newOrder.type || !newOrder.clientName || !newOrder.clientEmail) return;
     setCreating(true);
-    const toastId = toast.loading('Creating order...');
+    const toastId = toast.loading("Creating order...");
     const items = (newOrder.items as OrderItem[]) || [];
     const { subtotal, total } = recalcTotals(items, Number(newOrder.tax) || 0);
     const localId = `${Date.now()}`;
@@ -447,56 +321,75 @@ export function OrdersManager() {
       id: localId,
       orderNumber: genOrderNumber(newOrder.type as string),
       type: newOrder.type as any,
-      clientId: '',
+      clientId: "",
       clientName: newOrder.clientName!,
       clientEmail: newOrder.clientEmail!,
       items,
       subtotal,
       tax: Number(newOrder.tax) || 0,
       total,
-      status: 'draft',
-      paymentStatus: 'pending',
+      status: "draft",
+      paymentStatus: "pending",
       paymentMethod: newOrder.paymentMethod,
-      dateCreated: new Date().toISOString().split('T')[0],
+      dateCreated: new Date().toISOString().split("T")[0],
       notes: newOrder.notes,
       discount: 0,
-      shippingAddress: '',
-      billingAddress: '',
-      dueDate: newOrder.dueDate
+      shippingAddress: "",
+      billingAddress: "",
+      dueDate: newOrder.dueDate,
     };
 
     // Optimistic add
-    setOrders(prev => [order, ...prev]);
+    setOrders((prev) => [order, ...prev]);
     try {
-      const { data, error } = await supabase.from('orders').insert({
-        order_number: order.orderNumber,
-        order_type: order.type,
-        client_id: order.clientId || null,
-        items: order.items,
-        tax: order.tax,
-        total: order.total,
-        status: order.status,
-        discount: order.discount || 0,
-        shipping_address: order.shippingAddress || '',
-        billing_address: order.billingAddress || '',
-        notes: order.notes || null,
-        due_date: order.dueDate || null,
-        created_at: new Date().toISOString()
-      }).select('id, order_number').single();
+      const { data, error } = await supabase
+        .from("orders")
+        .insert({
+          order_number: order.orderNumber,
+          order_type: order.type,
+          client_id: order.clientId || null,
+          items: order.items,
+          tax: order.tax,
+          total: order.total,
+          status: order.status,
+          discount: order.discount || 0,
+          shipping_address: order.shippingAddress || "",
+          billing_address: order.billingAddress || "",
+          notes: order.notes || null,
+          due_date: order.dueDate || null,
+          created_at: new Date().toISOString(),
+        })
+        .select("id, order_number")
+        .single();
       if (error) throw error;
       // Reconcile id and number from DB
       if (data) {
-        setOrders(prev => prev.map(o => o.id === localId ? { ...o, id: data.id || o.id, orderNumber: data.order_number || o.orderNumber } : o));
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === localId
+              ? {
+                  ...o,
+                  id: data.id || o.id,
+                  orderNumber: data.order_number || o.orderNumber,
+                }
+              : o
+          )
+        );
       }
-      toast.success('Order created', { id: toastId });
+      toast.success("Order created", { id: toastId });
     } catch (e) {
-      toast.info('Saved locally (offline or server error)', { id: toastId });
+      toast.info("Saved locally (offline or server error)", { id: toastId });
       console.error(e);
     }
     setCreating(false);
     setIsAddDialogOpen(false);
     setNewOrder({ items: [], subtotal: 0, tax: 0, total: 0 });
-    setNewItem({ productName: '', productType: 'painting', quantity: 1, unitPrice: 0 });
+    setNewItem({
+      productName: "",
+      productType: "painting",
+      quantity: 1,
+      unitPrice: 0,
+    });
   };
 
   // Edit helpers
@@ -504,22 +397,28 @@ export function OrdersManager() {
     if (!editOrder || !editItem.productName) return;
     const item: OrderItem = {
       id: `${Date.now()}`,
-      productId: '',
+      productId: "",
       productName: editItem.productName!,
-      productType: (editItem.productType as any) || 'painting',
+      productType: (editItem.productType as any) || "painting",
       quantity: Number(editItem.quantity) || 1,
       unitPrice: Number(editItem.unitPrice) || 0,
-      totalPrice: (Number(editItem.quantity) || 1) * (Number(editItem.unitPrice) || 0)
+      totalPrice:
+        (Number(editItem.quantity) || 1) * (Number(editItem.unitPrice) || 0),
     };
-    const items = [ ...editOrder.items, item ];
+    const items = [...editOrder.items, item];
     const { subtotal, total } = recalcTotals(items, Number(editOrder.tax) || 0);
     setEditOrder({ ...editOrder, items, subtotal, total });
-    setEditItem({ productName: '', productType: editItem.productType || 'painting', quantity: 1, unitPrice: 0 });
+    setEditItem({
+      productName: "",
+      productType: editItem.productType || "painting",
+      quantity: 1,
+      unitPrice: 0,
+    });
   };
 
   const removeItemFromEditOrder = (id: string) => {
     if (!editOrder) return;
-    const items = editOrder.items.filter(i => i.id !== id);
+    const items = editOrder.items.filter((i) => i.id !== id);
     const { subtotal, total } = recalcTotals(items, Number(editOrder.tax) || 0);
     setEditOrder({ ...editOrder, items, subtotal, total });
   };
@@ -533,28 +432,33 @@ export function OrdersManager() {
   const handleSaveEditOrder = async () => {
     if (!editOrder) return;
     setSavingEdit(true);
-    const id = toast.loading('Saving changes...');
-    setOrders(prev => prev.map(o => o.id === editOrder.id ? editOrder : o));
+    const id = toast.loading("Saving changes...");
+    setOrders((prev) =>
+      prev.map((o) => (o.id === editOrder.id ? editOrder : o))
+    );
     try {
-      const { error } = await supabase.from('orders').update({
-        order_number: editOrder.orderNumber,
-        order_type: editOrder.type,
-        client_id: editOrder.clientId || null,
-        items: editOrder.items,
-        tax: editOrder.tax,
-        total: editOrder.total,
-        status: editOrder.status,
-        discount: editOrder.discount || 0,
-        shipping_address: editOrder.shippingAddress || '',
-        billing_address: editOrder.billingAddress || '',
-        notes: editOrder.notes || null,
-        due_date: editOrder.dueDate || null,
-        updated_at: new Date().toISOString()
-      }).eq('id', editOrder.id);
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          order_number: editOrder.orderNumber,
+          order_type: editOrder.type,
+          client_id: editOrder.clientId || null,
+          items: editOrder.items,
+          tax: editOrder.tax,
+          total: editOrder.total,
+          status: editOrder.status,
+          discount: editOrder.discount || 0,
+          shipping_address: editOrder.shippingAddress || "",
+          billing_address: editOrder.billingAddress || "",
+          notes: editOrder.notes || null,
+          due_date: editOrder.dueDate || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editOrder.id);
       if (error) throw error;
-      toast.success('Order updated', { id });
+      toast.success("Order updated", { id });
     } catch (e) {
-      toast.info('Updated locally (offline or server error)', { id });
+      toast.info("Updated locally (offline or server error)", { id });
       console.error(e);
     }
     setSavingEdit(false);
@@ -563,20 +467,23 @@ export function OrdersManager() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!window.confirm('Delete this order?')) return;
+    if (!window.confirm("Delete this order?")) return;
     setDeletingId(orderId);
-    const id = toast.loading('Deleting order...');
+    const id = toast.loading("Deleting order...");
     // Optimistic delete
-    setOrders(prev => prev.filter(o => o.id !== orderId));
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
     try {
-      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderId);
       if (error) throw error;
-      toast.success('Order deleted', { id });
+      toast.success("Order deleted", { id });
     } catch (e) {
       // Revert optimistic delete on error
       // Note: In a real implementation, you'd want to re-fetch the orders from the database
-      toast.info('Deleted locally (offline or server error)', { id });
-      console.error('Error deleting order:', e);
+      toast.info("Deleted locally (offline or server error)", { id });
+      console.error("Error deleting order:", e);
     }
     setDeletingId(null);
   };
@@ -594,10 +501,16 @@ export function OrdersManager() {
       status: order.status,
       dateCreated: order.dateCreated,
       dueDate: order.dueDate,
-      notes: order.notes
+      notes: order.notes,
     });
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(printContent); w.document.close(); w.focus(); w.print(); w.close(); }
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(printContent);
+      w.document.close();
+      w.focus();
+      w.print();
+      w.close();
+    }
   };
 
   const handleDownloadOrder = (order: Order) => {
@@ -613,11 +526,11 @@ export function OrdersManager() {
       status: order.status,
       dateCreated: order.dateCreated,
       dueDate: order.dueDate,
-      notes: order.notes
+      notes: order.notes,
     });
-    const blob = new Blob([html], { type: 'text/html' });
+    const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${order.orderNumber}.html`;
     document.body.appendChild(a);
@@ -628,25 +541,32 @@ export function OrdersManager() {
 
   const handleEmailOrder = (order: Order) => {
     const subject = `${order.orderNumber} from Sambright Investment Ltd`;
-    const body = `Dear ${order.clientName},\n\n` +
-                 `Please find attached your ${order.type} ${order.orderNumber}.\n\n` +
-                 `Order Details:\n` +
-                 `- Order Number: ${order.orderNumber}\n` +
-                 `- Date: ${new Date(order.dateCreated).toLocaleDateString()}\n` +
-                 `- Status: ${order.status}\n` +
-                 `- Total: ${order.total.toFixed(2)}\n\n` +
-                 `Thank you for your business!\n\n` +
-                 `Best regards,\nSambright Investment Ltd\nPainting Business CRM`;
+    const body =
+      `Dear ${order.clientName},\n\n` +
+      `Please find attached your ${order.type} ${order.orderNumber}.\n\n` +
+      `Order Details:\n` +
+      `- Order Number: ${order.orderNumber}\n` +
+      `- Date: ${new Date(order.dateCreated).toLocaleDateString()}\n` +
+      `- Status: ${order.status}\n` +
+      `- Total: ${order.total.toFixed(2)}\n\n` +
+      `Thank you for your business!\n\n` +
+      `Best regards,\nSambright Investment Ltd\nPainting Business CRM`;
 
-    window.location.href = `mailto:${order.clientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:${
+      order.clientEmail
+    }?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-gray-900">Orders & Invoices</h2>
-          <p className="text-gray-600">Manage quotes, sales orders, and invoices</p>
+          <h2 className="text-3xl font-bold text-gray-900">
+            Orders & Invoices
+          </h2>
+          <p className="text-gray-600">
+            Manage quotes, sales orders, and invoices
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -655,18 +575,25 @@ export function OrdersManager() {
               Create Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Order</DialogTitle>
               <DialogDescription>
                 Create a new quote, sale order, or invoice.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
+
+            <div className="grid gap-3 py-2">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="orderType" className="text-right">Type</Label>
-                <Select value={newOrder.type} onValueChange={(value) => setNewOrder({...newOrder, type: value as any})}>
+                <Label htmlFor="orderType" className="text-right">
+                  Type
+                </Label>
+                <Select
+                  value={newOrder.type}
+                  onValueChange={(value) =>
+                    setNewOrder({ ...newOrder, type: value as any })
+                  }
+                >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select order type" />
                   </SelectTrigger>
@@ -678,78 +605,163 @@ export function OrdersManager() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="clientName" className="text-right">Client</Label>
+                <Label htmlFor="clientName" className="text-right">
+                  Client
+                </Label>
                 <Input
                   id="clientName"
-                  value={newOrder.clientName || ''}
-                  onChange={(e) => setNewOrder({...newOrder, clientName: e.target.value})}
+                  value={newOrder.clientName || ""}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, clientName: e.target.value })
+                  }
                   className="col-span-3"
                   placeholder="Client name"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="clientEmail" className="text-right">Email</Label>
+                <Label htmlFor="clientEmail" className="text-right">
+                  Email
+                </Label>
                 <Input
                   id="clientEmail"
                   type="email"
-                  value={newOrder.clientEmail || ''}
-                  onChange={(e) => setNewOrder({...newOrder, clientEmail: e.target.value})}
+                  value={newOrder.clientEmail || ""}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, clientEmail: e.target.value })
+                  }
                   className="col-span-3"
                   placeholder="client@email.com"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dueDate" className="text-right">Due Date</Label>
-                <Input id="dueDate" type="date" value={(newOrder.dueDate as any) || ''} onChange={(e)=>setNewOrder({...newOrder, dueDate: e.target.value})} className="col-span-3" />
+                <Label htmlFor="dueDate" className="text-right">
+                  Due Date
+                </Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={(newOrder.dueDate as any) || ""}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, dueDate: e.target.value })
+                  }
+                  className="col-span-3"
+                />
               </div>
 
               {/* Items builder */}
-              <div className="space-y-2">
+              <div className="space-y-2 border-t pt-3">
+                <Label className="text-sm font-semibold">Order Items</Label>
                 <div className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-5">
-                    <Label className="mb-1 block">Item</Label>
-                    <Input value={newItem.productName || ''} onChange={(e)=>setNewItem({...newItem, productName: e.target.value})} placeholder="Description" />
+                  <div className="col-span-4">
+                    <Label className="mb-1 block text-xs">Item</Label>
+                    <Input
+                      value={newItem.productName || ""}
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, productName: e.target.value })
+                      }
+                      placeholder="Description"
+                      className="h-9"
+                    />
                   </div>
                   <div className="col-span-2">
-                    <Label className="mb-1 block">Type</Label>
-                    <Select value={(newItem.productType as any) || 'painting'} onValueChange={(v)=>setNewItem({...newItem, productType: v as any})}>
-                      <SelectTrigger><SelectValue placeholder="Type"/></SelectTrigger>
+                    <Label className="mb-1 block text-xs">Type</Label>
+                    <Select
+                      value={(newItem.productType as any) || "painting"}
+                      onValueChange={(v) =>
+                        setNewItem({ ...newItem, productType: v as any })
+                      }
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="painting">Painting</SelectItem>
                         <SelectItem value="paint">Paint</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-1">
-                    <Label className="mb-1 block">Qty</Label>
-                    <Input type="number" min={1} value={Number(newItem.quantity)||1} onChange={(e)=>setNewItem({...newItem, quantity: Number(e.target.value)})} />
+                  <div className="col-span-2">
+                    <Label className="mb-1 block text-xs">Qty</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={Number(newItem.quantity) || 1}
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          quantity: Number(e.target.value),
+                        })
+                      }
+                      className="h-9"
+                    />
                   </div>
                   <div className="col-span-2">
-                    <Label className="mb-1 block">Unit Price</Label>
-                    <Input type="number" step="0.01" value={Number(newItem.unitPrice)||0} onChange={(e)=>setNewItem({...newItem, unitPrice: Number(e.target.value)})} />
+                    <Label className="mb-1 block text-xs">Price</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={Number(newItem.unitPrice) || 0}
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          unitPrice: Number(e.target.value),
+                        })
+                      }
+                      className="h-9"
+                    />
                   </div>
                   <div className="col-span-2 flex justify-end">
-                    <Button variant="outline" onClick={addItemToNewOrder} className="mt-6"><Plus className="h-4 w-4 mr-1"/>Add Item</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addItemToNewOrder}
+                      className="h-9"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
                   </div>
                 </div>
                 {(newOrder.items as OrderItem[]).length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-600">
-                      <div className="col-span-5">Product</div>
+                  <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                    <div className="bg-gray-50 px-3 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 sticky top-0">
+                      <div className="col-span-4">Product</div>
                       <div className="col-span-2 text-center">Type</div>
-                      <div className="col-span-1 text-center">Qty</div>
+                      <div className="col-span-2 text-center">Qty</div>
                       <div className="col-span-2 text-right">Unit</div>
                       <div className="col-span-2 text-right">Total</div>
                     </div>
                     {(newOrder.items as OrderItem[]).map((item) => (
-                      <div key={item.id} className="px-4 py-3 grid grid-cols-12 gap-2 border-t items-center">
-                        <div className="col-span-5 font-medium">{item.productName}</div>
-                        <div className="col-span-2 text-center"><Badge variant="outline" className="text-xs">{item.productType}</Badge></div>
-                        <div className="col-span-1 text-center">{item.quantity}</div>
-                        <div className="col-span-2 text-right">${item.unitPrice.toFixed(2)}</div>
-                        <div className="col-span-2 text-right font-semibold">${item.totalPrice.toFixed(2)}</div>
-                        <div className="col-span-12 text-right mt-1">
-                          <Button variant="ghost" size="sm" onClick={()=>removeItemFromNewOrder(item.id)} className="text-red-600"><Trash2 className="h-4 w-4"/></Button>
+                      <div
+                        key={item.id}
+                        className="px-3 py-2 grid grid-cols-12 gap-2 border-t items-center text-sm hover:bg-gray-50"
+                      >
+                        <div className="col-span-4 font-medium text-sm">
+                          {item.productName}
+                        </div>
+                        <div className="col-span-2 text-center">
+                          <Badge variant="outline" className="text-xs">
+                            {item.productType}
+                          </Badge>
+                        </div>
+                        <div className="col-span-2 text-center">
+                          {item.quantity}
+                        </div>
+                        <div className="col-span-2 text-right text-xs">
+                          {formatCurrency(item.unitPrice)}
+                        </div>
+                        <div className="col-span-1 text-right font-semibold text-sm">
+                          {formatCurrency(item.totalPrice)}
+                        </div>
+                        <div className="col-span-1 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeItemFromNewOrder(item.id)}
+                            className="text-red-600 h-6 w-6 p-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -758,51 +770,101 @@ export function OrdersManager() {
               </div>
 
               {/* Tax and totals */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="taxAmount" className="text-right">Tax/Fees</Label>
-                <Input id="taxAmount" type="number" step="0.01" value={Number(newOrder.tax)||0} onChange={(e)=>updateNewTax(Number(e.target.value))} className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Totals</Label>
-                <div className="col-span-3 text-sm">
-                  <div>Subtotal: <strong>${(Number(newOrder.subtotal)||0).toFixed(2)}</strong></div>
-                  <div>Tax/Fees: <strong>${(Number(newOrder.tax)||0).toFixed(2)}</strong></div>
-                  <div>Total: <strong className="text-green-600">${(Number(newOrder.total)||0).toFixed(2)}</strong></div>
+              <div className="border-t pt-3 space-y-2">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="taxAmount" className="text-right text-sm">
+                    Tax/Fees
+                  </Label>
+                  <Input
+                    id="taxAmount"
+                    type="number"
+                    step="0.01"
+                    value={Number(newOrder.tax) || 0}
+                    onChange={(e) => updateNewTax(Number(e.target.value))}
+                    className="col-span-3 h-9"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4 bg-gray-50 p-3 rounded-lg">
+                  <Label className="text-right text-sm font-semibold">
+                    Totals
+                  </Label>
+                  <div className="col-span-3 text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <strong>
+                        {formatCurrency(Number(newOrder.subtotal) || 0)}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tax/Fees:</span>
+                      <strong>
+                        {formatCurrency(Number(newOrder.tax) || 0)}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between text-base border-t pt-1">
+                      <span className="font-semibold">Total:</span>
+                      <strong className="text-green-600">
+                        {formatCurrency(Number(newOrder.total) || 0)}
+                      </strong>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="orderNotes" className="text-right">Notes</Label>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="orderNotes" className="text-right text-sm pt-2">
+                  Notes
+                </Label>
                 <Textarea
                   id="orderNotes"
-                  value={newOrder.notes || ''}
-                  onChange={(e) => setNewOrder({...newOrder, notes: e.target.value})}
-                  className="col-span-3"
+                  value={newOrder.notes || ""}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, notes: e.target.value })
+                  }
+                  className="col-span-3 h-20"
                   placeholder="Any additional notes..."
                 />
               </div>
             </div>
-            
-            <DialogFooter>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => {
-                  const html = createOrderLetterheadHTML({
-                    orderNumber: genOrderNumber((newOrder.type as string) || 'ord'),
-                    type: (newOrder.type as string) || 'quote',
-                    clientName: newOrder.clientName || '',
-                    clientEmail: newOrder.clientEmail || '',
-                    items: (newOrder.items as OrderItem[]) || [],
-                    subtotal: Number(newOrder.subtotal) || 0,
-                    tax: Number(newOrder.tax) || 0,
-                    total: Number(newOrder.total) || 0,
-                    status: 'draft',
-                    dateCreated: new Date().toISOString(),
-                    dueDate: (newOrder.dueDate as any) || undefined,
-                    notes: newOrder.notes || ''
-                  });
-                  const w = window.open('', '_blank');
-                  if (w) { w.document.write(html); w.document.close(); }
-                }}>Preview on Letterhead</Button>
-                <Button onClick={handleCreateOrder} disabled={creating}>{creating ? 'Creating...' : 'Create Order'}</Button>
+
+            <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t mt-4">
+              <div className="flex gap-2 w-full justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const html = createOrderLetterheadHTML({
+                      orderNumber: genOrderNumber(
+                        (newOrder.type as string) || "ord"
+                      ),
+                      type: (newOrder.type as string) || "quote",
+                      clientName: newOrder.clientName || "",
+                      clientEmail: newOrder.clientEmail || "",
+                      items: (newOrder.items as OrderItem[]) || [],
+                      subtotal: Number(newOrder.subtotal) || 0,
+                      tax: Number(newOrder.tax) || 0,
+                      total: Number(newOrder.total) || 0,
+                      status: "draft",
+                      dateCreated: new Date().toISOString(),
+                      dueDate: (newOrder.dueDate as any) || undefined,
+                      notes: newOrder.notes || "",
+                    });
+                    const w = window.open("", "_blank");
+                    if (w) {
+                      w.document.write(html);
+                      w.document.close();
+                    }
+                  }}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  Preview
+                </Button>
+                <Button
+                  onClick={handleCreateOrder}
+                  disabled={creating}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                >
+                  {creating ? "Creating..." : "Create Order"}
+                </Button>
               </div>
             </DialogFooter>
           </DialogContent>
@@ -837,36 +899,67 @@ export function OrdersManager() {
         </div>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-8"
+      >
         <TabsList className="bg-white/80 backdrop-blur-sm border shadow-sm">
-          <TabsTrigger value="all" className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+          <TabsTrigger
+            value="all"
+            className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+          >
             <Package className="h-4 w-4" />
             <span>All Orders ({orders.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="quote" className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+          <TabsTrigger
+            value="quote"
+            className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+          >
             <FileText className="h-4 w-4" />
-            <span>Quotes ({orders.filter(o => o.type === 'quote').length})</span>
+            <span>
+              Quotes ({orders.filter((o) => o.type === "quote").length})
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="sale" className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+          <TabsTrigger
+            value="sale"
+            className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+          >
             <ShoppingCart className="h-4 w-4" />
-            <span>Sales ({orders.filter(o => o.type === 'sale').length})</span>
+            <span>
+              Sales ({orders.filter((o) => o.type === "sale").length})
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="invoice" className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+          <TabsTrigger
+            value="invoice"
+            className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+          >
             <CreditCard className="h-4 w-4" />
-            <span>Invoices ({orders.filter(o => o.type === 'invoice').length})</span>
+            <span>
+              Invoices ({orders.filter((o) => o.type === "invoice").length})
+            </span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-6">
           <div className="grid gap-6">
             {filteredOrders.map((order) => (
-              <Card key={order.id} className={`${isOverdue(order) ? 'border-red-200 bg-red-50' : 'bg-white/80 backdrop-blur-sm'} hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}>
+              <Card
+                key={order.id}
+                className={`${
+                  isOverdue(order)
+                    ? "border-red-200 bg-red-50"
+                    : "bg-white/80 backdrop-blur-sm"
+                } hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center space-x-3">
                       {getOrderTypeIcon(order.type)}
                       <div>
-                        <CardTitle className="text-lg">{order.orderNumber}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {order.orderNumber}
+                        </CardTitle>
                         <CardDescription className="flex items-center space-x-2">
                           <User className="h-3 w-3" />
                           <span>{order.clientName}</span>
@@ -888,15 +981,21 @@ export function OrdersManager() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <div className="text-sm text-gray-600">Subtotal</div>
-                      <div className="font-semibold">${order.subtotal.toLocaleString()}</div>
+                      <div className="font-semibold">
+                        {formatCurrency(order.subtotal)}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Tax</div>
-                      <div className="font-semibold">${order.tax.toLocaleString()}</div>
+                      <div className="font-semibold">
+                        {formatCurrency(order.tax)}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Total</div>
-                      <div className="text-lg font-bold text-green-600">${order.total.toLocaleString()}</div>
+                      <div className="text-lg font-bold text-green-600">
+                        {formatCurrency(order.total)}
+                      </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Payment</div>
@@ -905,16 +1004,27 @@ export function OrdersManager() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <div className="text-sm text-gray-600 mb-2">Items ({order.items.length})</div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      Items ({order.items.length})
+                    </div>
                     <div className="space-y-1">
                       {order.items.slice(0, 2).map((item) => (
-                        <div key={item.id} className="flex justify-between items-center text-sm">
-                          <span>{item.productName} x{item.quantity}</span>
-                          <span className="font-medium">${item.totalPrice}</span>
+                        <div
+                          key={item.id}
+                          className="flex justify-between items-center text-sm"
+                        >
+                          <span>
+                            {item.productName} x{item.quantity}
+                          </span>
+                          <span className="font-medium">
+                            {formatCurrency(item.totalPrice)}
+                          </span>
                         </div>
                       ))}
                       {order.items.length > 2 && (
-                        <div className="text-sm text-gray-500">+{order.items.length - 2} more items</div>
+                        <div className="text-sm text-gray-500">
+                          +{order.items.length - 2} more items
+                        </div>
                       )}
                     </div>
                   </div>
@@ -922,24 +1032,31 @@ export function OrdersManager() {
                   <div className="flex justify-between items-center text-sm text-gray-600">
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-3 w-3" />
-                      <span>Created: {new Date(order.dateCreated).toLocaleDateString()}</span>
+                      <span>
+                        Created:{" "}
+                        {new Date(order.dateCreated).toLocaleDateString()}
+                      </span>
                     </div>
                     {order.dueDate && (
                       <div className="flex items-center space-x-2">
                         <Clock className="h-3 w-3" />
-                        <span>Due: {new Date(order.dueDate).toLocaleDateString()}</span>
+                        <span>
+                          Due: {new Date(order.dueDate).toLocaleDateString()}
+                        </span>
                       </div>
                     )}
                   </div>
 
                   {order.notes && (
-                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{order.notes}</p>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                      {order.notes}
+                    </p>
                   )}
 
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="flex-1 min-w-[100px]"
                       onClick={() => {
                         setSelectedOrder(order);
@@ -949,30 +1066,52 @@ export function OrdersManager() {
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handlePrintOrder(order)}
                       className="hidden sm:flex"
                     >
                       <Printer className="h-3 w-3" />
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handleDownloadOrder(order)}
                       className="hidden sm:flex"
                     >
                       <Download className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => { setEditOrder({...order}); setIsEditDialogOpen(true); }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditOrder({ ...order });
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-200" onClick={() => handleDeleteOrder(order.id)} disabled={deletingId === order.id}>
-                      {deletingId === order.id ? 'Deleting…' : <Trash2 className="h-3 w-3" />}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-200"
+                      onClick={() => handleDeleteOrder(order.id)}
+                      disabled={deletingId === order.id}
+                    >
+                      {deletingId === order.id ? (
+                        "Deleting…"
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
                     </Button>
-                    {order.type === 'quote' && order.status === 'sent' && (
-                      <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">Accept</Button>
+                    {order.type === "quote" && order.status === "sent" && (
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                      >
+                        Accept
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -992,11 +1131,13 @@ export function OrdersManager() {
                   {getOrderTypeIcon(selectedOrder.type)}
                   <div>
                     <div>{selectedOrder.orderNumber}</div>
-                    <div className="text-sm text-gray-500 font-normal">{selectedOrder.clientName}</div>
+                    <div className="text-sm text-gray-500 font-normal">
+                      {selectedOrder.clientName}
+                    </div>
                   </div>
                 </DialogTitle>
               </DialogHeader>
-              
+
               <div className="space-y-6">
                 {/* Status and Payment Info */}
                 <div className="grid grid-cols-2 gap-6">
@@ -1008,11 +1149,15 @@ export function OrdersManager() {
                         {getStatusBadge(selectedOrder.status)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        Created: {new Date(selectedOrder.dateCreated).toLocaleDateString()}
+                        Created:{" "}
+                        {new Date(
+                          selectedOrder.dateCreated
+                        ).toLocaleDateString()}
                       </div>
                       {selectedOrder.dueDate && (
                         <div className="text-sm text-gray-600">
-                          Due: {new Date(selectedOrder.dueDate).toLocaleDateString()}
+                          Due:{" "}
+                          {new Date(selectedOrder.dueDate).toLocaleDateString()}
                         </div>
                       )}
                     </div>
@@ -1020,7 +1165,9 @@ export function OrdersManager() {
                   <div>
                     <h4 className="font-medium mb-3">Payment Information</h4>
                     <div className="space-y-2">
-                      <div>{getPaymentStatusBadge(selectedOrder.paymentStatus)}</div>
+                      <div>
+                        {getPaymentStatusBadge(selectedOrder.paymentStatus)}
+                      </div>
                       {selectedOrder.paymentMethod && (
                         <div className="text-sm text-gray-600">
                           Method: {selectedOrder.paymentMethod}
@@ -1045,16 +1192,27 @@ export function OrdersManager() {
                       <div className="col-span-2 text-right">Total</div>
                     </div>
                     {selectedOrder.items.map((item) => (
-                      <div key={item.id} className="px-4 py-3 grid grid-cols-12 gap-2 border-t">
-                        <div className="col-span-5 font-medium">{item.productName}</div>
+                      <div
+                        key={item.id}
+                        className="px-4 py-3 grid grid-cols-12 gap-2 border-t"
+                      >
+                        <div className="col-span-5 font-medium">
+                          {item.productName}
+                        </div>
                         <div className="col-span-2 text-center">
                           <Badge variant="outline" className="text-xs">
                             {item.productType}
                           </Badge>
                         </div>
-                        <div className="col-span-1 text-center">{item.quantity}</div>
-                        <div className="col-span-2 text-right">${item.unitPrice}</div>
-                        <div className="col-span-2 text-right font-semibold">${item.totalPrice}</div>
+                        <div className="col-span-1 text-center">
+                          {item.quantity}
+                        </div>
+                        <div className="col-span-2 text-right">
+                          ${item.unitPrice}
+                        </div>
+                        <div className="col-span-2 text-right font-semibold">
+                          ${item.totalPrice}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1073,7 +1231,9 @@ export function OrdersManager() {
                     </div>
                     <div className="flex justify-between text-lg font-bold border-t pt-2">
                       <span>Total:</span>
-                      <span className="text-green-600">${selectedOrder.total.toLocaleString()}</span>
+                      <span className="text-green-600">
+                        ${selectedOrder.total.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1082,39 +1242,48 @@ export function OrdersManager() {
                 {selectedOrder.notes && (
                   <div>
                     <h4 className="font-medium mb-3">Notes</h4>
-                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedOrder.notes}</p>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                      {selectedOrder.notes}
+                    </p>
                   </div>
                 )}
               </div>
-              
+
               <DialogFooter>
                 <div className="flex flex-wrap gap-2">
-                  <Button 
+                  <Button
                     variant="outline"
-                    onClick={() => selectedOrder && handlePrintOrder(selectedOrder)}
+                    onClick={() =>
+                      selectedOrder && handlePrintOrder(selectedOrder)
+                    }
                   >
                     <Printer className="h-4 w-4 mr-2" />
                     Print
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
-                    onClick={() => selectedOrder && handleDownloadOrder(selectedOrder)}
+                    onClick={() =>
+                      selectedOrder && handleDownloadOrder(selectedOrder)
+                    }
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
-                    onClick={() => selectedOrder && handleEmailOrder(selectedOrder)}
+                    onClick={() =>
+                      selectedOrder && handleEmailOrder(selectedOrder)
+                    }
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Email
                   </Button>
-                  {selectedOrder.type === 'quote' && selectedOrder.status === 'sent' && (
-                    <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-                      Convert to Sale
-                    </Button>
-                  )}
+                  {selectedOrder.type === "quote" &&
+                    selectedOrder.status === "sent" && (
+                      <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+                        Convert to Sale
+                      </Button>
+                    )}
                 </div>
               </DialogFooter>
             </>
@@ -1127,14 +1296,23 @@ export function OrdersManager() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Order</DialogTitle>
-            <DialogDescription>Update details and items, then save.</DialogDescription>
+            <DialogDescription>
+              Update details and items, then save.
+            </DialogDescription>
           </DialogHeader>
           {editOrder && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Type</Label>
-                <Select value={editOrder.type} onValueChange={(v)=>setEditOrder({...editOrder, type: v as any})}>
-                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select type"/></SelectTrigger>
+                <Select
+                  value={editOrder.type}
+                  onValueChange={(v) =>
+                    setEditOrder({ ...editOrder, type: v as any })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="quote">Quote</SelectItem>
                     <SelectItem value="sale">Sale Order</SelectItem>
@@ -1144,19 +1322,42 @@ export function OrdersManager() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Due Date</Label>
-                <Input className="col-span-3" type="date" value={editOrder.dueDate || ''} onChange={(e)=>setEditOrder({...editOrder, dueDate: e.target.value})}/>
+                <Input
+                  className="col-span-3"
+                  type="date"
+                  value={editOrder.dueDate || ""}
+                  onChange={(e) =>
+                    setEditOrder({ ...editOrder, dueDate: e.target.value })
+                  }
+                />
               </div>
 
               <div className="space-y-2">
                 <div className="grid grid-cols-12 gap-2 items-end">
                   <div className="col-span-5">
                     <Label className="mb-1 block">Item</Label>
-                    <Input value={editItem.productName || ''} onChange={(e)=>setEditItem({...editItem, productName: e.target.value})} placeholder="Description"/>
+                    <Input
+                      value={editItem.productName || ""}
+                      onChange={(e) =>
+                        setEditItem({
+                          ...editItem,
+                          productName: e.target.value,
+                        })
+                      }
+                      placeholder="Description"
+                    />
                   </div>
                   <div className="col-span-2">
                     <Label className="mb-1 block">Type</Label>
-                    <Select value={(editItem.productType as any)||'painting'} onValueChange={(v)=>setEditItem({...editItem, productType: v as any})}>
-                      <SelectTrigger><SelectValue placeholder="Type"/></SelectTrigger>
+                    <Select
+                      value={(editItem.productType as any) || "painting"}
+                      onValueChange={(v) =>
+                        setEditItem({ ...editItem, productType: v as any })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="painting">Painting</SelectItem>
                         <SelectItem value="paint">Paint</SelectItem>
@@ -1165,12 +1366,41 @@ export function OrdersManager() {
                   </div>
                   <div className="col-span-1">
                     <Label className="mb-1 block">Qty</Label>
-                    <Input type="number" min={1} value={Number(editItem.quantity)||1} onChange={(e)=>setEditItem({...editItem, quantity: Number(e.target.value)})}/></div>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={Number(editItem.quantity) || 1}
+                      onChange={(e) =>
+                        setEditItem({
+                          ...editItem,
+                          quantity: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
                   <div className="col-span-2">
                     <Label className="mb-1 block">Unit Price</Label>
-                    <Input type="number" step="0.01" value={Number(editItem.unitPrice)||0} onChange={(e)=>setEditItem({...editItem, unitPrice: Number(e.target.value)})}/></div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={Number(editItem.unitPrice) || 0}
+                      onChange={(e) =>
+                        setEditItem({
+                          ...editItem,
+                          unitPrice: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
                   <div className="col-span-2 flex justify-end">
-                    <Button variant="outline" onClick={addItemToEditOrder} className="mt-6"><Plus className="h-4 w-4 mr-1"/>Add Item</Button>
+                    <Button
+                      variant="outline"
+                      onClick={addItemToEditOrder}
+                      className="mt-6"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Item
+                    </Button>
                   </div>
                 </div>
 
@@ -1183,14 +1413,36 @@ export function OrdersManager() {
                     <div className="col-span-2 text-right">Total</div>
                   </div>
                   {editOrder.items.map((item) => (
-                    <div key={item.id} className="px-4 py-3 grid grid-cols-12 gap-2 border-t items-center">
-                      <div className="col-span-5 font-medium">{item.productName}</div>
-                      <div className="col-span-2 text-center"><Badge variant="outline" className="text-xs">{item.productType}</Badge></div>
-                      <div className="col-span-1 text-center">{item.quantity}</div>
-                      <div className="col-span-2 text-right">${item.unitPrice.toFixed(2)}</div>
-                      <div className="col-span-2 text-right font-semibold">${item.totalPrice.toFixed(2)}</div>
+                    <div
+                      key={item.id}
+                      className="px-4 py-3 grid grid-cols-12 gap-2 border-t items-center"
+                    >
+                      <div className="col-span-5 font-medium">
+                        {item.productName}
+                      </div>
+                      <div className="col-span-2 text-center">
+                        <Badge variant="outline" className="text-xs">
+                          {item.productType}
+                        </Badge>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        {item.quantity}
+                      </div>
+                      <div className="col-span-2 text-right">
+                        ${item.unitPrice.toFixed(2)}
+                      </div>
+                      <div className="col-span-2 text-right font-semibold">
+                        ${item.totalPrice.toFixed(2)}
+                      </div>
                       <div className="col-span-12 text-right mt-1">
-                        <Button variant="ghost" size="sm" onClick={()=>removeItemFromEditOrder(item.id)} className="text-red-600"><Trash2 className="h-4 w-4"/></Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItemFromEditOrder(item.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -1199,25 +1451,60 @@ export function OrdersManager() {
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Tax/Fees</Label>
-                <Input className="col-span-3" type="number" step="0.01" value={Number(editOrder.tax)||0} onChange={(e)=>updateEditTax(Number(e.target.value))}/></div>
+                <Input
+                  className="col-span-3"
+                  type="number"
+                  step="0.01"
+                  value={Number(editOrder.tax) || 0}
+                  onChange={(e) => updateEditTax(Number(e.target.value))}
+                />
+              </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Totals</Label>
                 <div className="col-span-3 text-sm">
-                  <div>Subtotal: <strong>${(Number(editOrder.subtotal)||0).toFixed(2)}</strong></div>
-                  <div>Tax/Fees: <strong>${(Number(editOrder.tax)||0).toFixed(2)}</strong></div>
-                  <div>Total: <strong className="text-green-600">${(Number(editOrder.total)||0).toFixed(2)}</strong></div>
+                  <div>
+                    Subtotal:{" "}
+                    <strong>
+                      ${(Number(editOrder.subtotal) || 0).toFixed(2)}
+                    </strong>
+                  </div>
+                  <div>
+                    Tax/Fees:{" "}
+                    <strong>${(Number(editOrder.tax) || 0).toFixed(2)}</strong>
+                  </div>
+                  <div>
+                    Total:{" "}
+                    <strong className="text-green-600">
+                      ${(Number(editOrder.total) || 0).toFixed(2)}
+                    </strong>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Notes</Label>
-                <Textarea className="col-span-3" value={editOrder.notes || ''} onChange={(e)=>setEditOrder({...editOrder, notes: e.target.value})} placeholder="Any additional notes..."/>
+                <Textarea
+                  className="col-span-3"
+                  value={editOrder.notes || ""}
+                  onChange={(e) =>
+                    setEditOrder({ ...editOrder, notes: e.target.value })
+                  }
+                  placeholder="Any additional notes..."
+                />
               </div>
             </div>
           )}
           <DialogFooter>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={()=>setIsEditDialogOpen(false)} disabled={savingEdit}>Cancel</Button>
-              <Button onClick={handleSaveEditOrder} disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save Changes'}</Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={savingEdit}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEditOrder} disabled={savingEdit}>
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
           </DialogFooter>
         </DialogContent>

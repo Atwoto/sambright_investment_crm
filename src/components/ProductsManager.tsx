@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE } from '../utils/api';
+import { formatCurrency } from '../utils/currency';
 
 interface Paint {
   id: string;
@@ -69,185 +70,53 @@ export function ProductsManager() {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const paintsFromDb = data.filter(p => p.product_type === 'paint').map(p => ({
-            id: p.id,
-            sku: p.sku,
-            brand: p.brand,
-            name: p.name,
-            size: p.size,
-            color: p.color,
-            unitPrice: p.unit_price,
-            supplier: p.supplier,
-            stockLevel: p.stock_level,
-            minStockLevel: p.min_stock_level,
-            category: p.category
-          }));
-          
-          const paintingsFromDb = data.filter(p => p.product_type === 'painting').map(p => ({
-            id: p.id,
-            title: p.title,
-            category: p.category,
-            artist: p.artist,
-            medium: p.medium,
-            size: p.size,
-            price: p.price,
-            galleryLocation: p.gallery_location,
-            status: p.status,
-            dateCreated: p.date_created,
-            description: p.description
-          }));
-          
-          setPaints(paintsFromDb);
-          setPaintings(paintingsFromDb);
-        } else {
-          // Seed demo content if DB empty
-          setPaints([
-            {
-              id: '1',
-              sku: 'WN-TW-500',
-              brand: 'Winsor & Newton',
-              name: 'Titanium White',
-              size: '500ml',
-              color: 'White',
-              unitPrice: 24.99,
-              supplier: 'Art Supply Co.',
-              stockLevel: 3,
-              minStockLevel: 5,
-              category: 'Acrylic'
-            },
-            {
-              id: '2',
-              sku: 'GLD-UB-200',
-              brand: 'Golden',
-              name: 'Ultramarine Blue',
-              size: '200ml',
-              color: 'Blue',
-              unitPrice: 18.50,
-              supplier: 'Professional Paints Ltd',
-              stockLevel: 12,
-              minStockLevel: 8,
-              category: 'Acrylic'
-            },
-            {
-              id: '3',
-              sku: 'SCH-CR-100',
-              brand: 'Schmincke',
-              name: 'Cadmium Red',
-              size: '100ml',
-              color: 'Red',
-              unitPrice: 32.00,
-              supplier: 'European Art Materials',
-              stockLevel: 2,
-              minStockLevel: 4,
-              category: 'Oil'
-            }
-          ]);
-
-          setPaintings([
-            {
-              id: '1',
-              title: 'Sunset Landscape',
-              category: 'Landscape',
-              artist: 'You',
-              medium: 'Oil on Canvas',
-              size: '24 x 36 inches',
-              price: 850,
-              galleryLocation: 'Studio',
-              status: 'available',
-              dateCreated: '2024-01-15',
-              description: 'A beautiful sunset over rolling hills with warm orange and pink tones.'
-            },
-            {
-              id: '2',
-              title: 'Urban Abstract',
-              category: 'Abstract',
-              artist: 'You',
-              medium: 'Acrylic on Canvas',
-              size: '18 x 24 inches',
-              price: 650,
-              galleryLocation: 'Downtown Gallery',
-              status: 'consignment',
-              dateCreated: '2024-02-03',
-              description: 'Modern abstract piece inspired by city architecture.'
-            },
-            {
-              id: '3',
-              title: 'Portrait Study',
-              category: 'Portrait',
-              artist: 'You',
-              medium: 'Watercolor',
-              size: '12 x 16 inches',
-              price: 450,
-              status: 'sold',
-              dateCreated: '2024-01-28',
-              description: 'Commissioned portrait study with soft watercolor techniques.'
-            }
-          ]);
+        if (error) {
+          console.error('Supabase error:', error);
+          toast.error('Failed to load products from database');
+          setPaints([]);
+          setPaintings([]);
+          return;
         }
+        
+        const paintsFromDb = (data || []).filter(p => p.product_type === 'paint').map(p => ({
+          id: p.id,
+          sku: p.sku,
+          brand: p.brand,
+          name: p.name,
+          size: p.size,
+          color: p.color,
+          unitPrice: p.unit_price,
+          supplier: p.supplier,
+          stockLevel: p.stock_level,
+          minStockLevel: p.min_stock_level,
+          category: p.category
+        }));
+        
+        const paintingsFromDb = (data || []).filter(p => p.product_type === 'painting').map(p => ({
+          id: p.id,
+          title: p.title,
+          category: p.category,
+          artist: p.artist,
+          medium: p.medium,
+          size: p.size,
+          price: p.price,
+          galleryLocation: p.gallery_location,
+          status: p.status,
+          dateCreated: p.date_created,
+          description: p.description
+        }));
+        
+        setPaints(paintsFromDb);
+        setPaintings(paintingsFromDb);
+        console.log(`Loaded ${paintsFromDb.length} paints and ${paintingsFromDb.length} paintings from database`);
       } catch (error) {
         console.error('Error loading products:', error);
-        // Fallback to seed data if there's an error
-        setPaints([
-          {
-            id: '1',
-            sku: 'WN-TW-500',
-            brand: 'Winsor & Newton',
-            name: 'Titanium White',
-            size: '500ml',
-            color: 'White',
-            unitPrice: 24.99,
-            supplier: 'Art Supply Co.',
-            stockLevel: 3,
-            minStockLevel: 5,
-            category: 'Acrylic'
-          },
-          {
-            id: '2',
-            sku: 'GLD-UB-200',
-            brand: 'Golden',
-            name: 'Ultramarine Blue',
-            size: '200ml',
-            color: 'Blue',
-            unitPrice: 18.50,
-            supplier: 'Professional Paints Ltd',
-            stockLevel: 12,
-            minStockLevel: 8,
-            category: 'Acrylic'
-          },
-          {
-            id: '3',
-            sku: 'SCH-CR-100',
-            brand: 'Schmincke',
-            name: 'Cadmium Red',
-            size: '100ml',
-            color: 'Red',
-            unitPrice: 32.00,
-            supplier: 'European Art Materials',
-            stockLevel: 2,
-            minStockLevel: 4,
-            category: 'Oil'
-          }
-        ]);
-
-        setPaintings([
-          {
-            id: '1',
-            title: 'Sunset Landscape',
-            category: 'Landscape',
-            artist: 'You',
-            medium: 'Oil on Canvas',
-            size: '24 x 36 inches',
-            price: 850,
-            galleryLocation: 'Studio',
-            status: 'available',
-            dateCreated: '2024-01-15',
-            description: 'A beautiful sunset over rolling hills with warm orange and pink tones.'
-          },
+        toast.error('Failed to load products');
+        setPaints([]);
+        setPaintings([]);
           {
             id: '2',
             title: 'Urban Abstract',
@@ -269,11 +138,6 @@ export function ProductsManager() {
             medium: 'Watercolor',
             size: '12 x 16 inches',
             price: 450,
-            status: 'sold',
-            dateCreated: '2024-01-28',
-            description: 'Commissioned portrait study with soft watercolor techniques.'
-          }
-        ]);
       }
     };
     
@@ -898,7 +762,7 @@ export function ProductsManager() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Price:</span>
-                    <span className="font-semibold">${paint.unitPrice}</span>
+                    <span className="font-semibold">{formatCurrency(paint.unitPrice)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Stock:</span>
@@ -949,7 +813,7 @@ export function ProductsManager() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Price:</span>
-                    <span className="font-semibold">${painting.price}</span>
+                    <span className="font-semibold">{formatCurrency(painting.price)}</span>
                   </div>
                   {painting.galleryLocation && (
                     <div className="flex justify-between items-center">
