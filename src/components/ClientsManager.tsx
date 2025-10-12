@@ -29,6 +29,7 @@ import {
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { formatCurrency } from "../utils/currency";
 import {
   Plus,
   Search,
@@ -62,6 +63,7 @@ interface Client {
     | "gallery";
   preferences: string[];
   totalSpent: number;
+  orderCount?: number;
   lastPurchase?: string;
   dateAdded: string;
   notes?: string;
@@ -102,6 +104,28 @@ export function ClientsManager() {
           return;
         }
 
+        // Load orders to calculate total spent
+        const { data: ordersData } = await supabase
+          .from("orders")
+          .select("client_id, total");
+
+        // Calculate total spent per client
+        const clientTotals = (ordersData || []).reduce((acc, order) => {
+          if (order.client_id) {
+            acc[order.client_id] =
+              (acc[order.client_id] || 0) + (order.total || 0);
+          }
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Count orders per client
+        const clientOrderCounts = (ordersData || []).reduce((acc, order) => {
+          if (order.client_id) {
+            acc[order.client_id] = (acc[order.client_id] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+
         const clientsFromDb = (data || []).map((client) => ({
           id: client.id,
           name: client.name,
@@ -110,14 +134,15 @@ export function ClientsManager() {
           phone: client.phone,
           address: client.address,
           clientType: client.client_type || "residential",
-          preferences: [], // Not in your schema, using empty array
-          totalSpent: 0, // Not in your schema, using 0
-          lastPurchase: "", // Not in your schema, using empty string
+          preferences: [],
+          totalSpent: clientTotals[client.id] || 0,
+          orderCount: clientOrderCounts[client.id] || 0,
+          lastPurchase: "",
           dateAdded: client.created_at
             ? new Date(client.created_at).toISOString().split("T")[0]
             : "",
           notes: client.notes || "",
-          purchaseHistory: [], // Not in your schema, using empty array
+          purchaseHistory: [], // Could be populated from orders if needed
         }));
 
         setClients(clientsFromDb);
@@ -746,13 +771,13 @@ export function ClientsManager() {
               <div className="flex justify-between items-center pt-2 border-t">
                 <div className="text-center">
                   <div className="text-lg font-semibold text-green-600">
-                    ${client.totalSpent.toLocaleString()}
+                    {formatCurrency(client.totalSpent)}
                   </div>
                   <div className="text-xs text-gray-500">Total Spent</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-semibold">
-                    {client.purchaseHistory.length}
+                    {client.orderCount || 0}
                   </div>
                   <div className="text-xs text-gray-500">Orders</div>
                 </div>

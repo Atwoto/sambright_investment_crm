@@ -523,9 +523,25 @@ export function InventoryTransactions() {
     .filter((t) => ["stock_out", "damaged", "lost"].includes(t.type))
     .reduce((sum, t) => sum + Math.abs(t.quantity), 0);
 
+  // Calculate net inventory value based on transaction types
   const totalValue = filteredTransactions
     .filter((t) => t.totalCost)
-    .reduce((sum, t) => sum + (t.totalCost || 0), 0);
+    .reduce((sum, t) => {
+      const cost = t.totalCost || 0;
+      // Add value for stock coming in
+      if (t.type === "stock_in" || t.type === "return") {
+        return sum + cost;
+      }
+      // Subtract value for stock going out or being lost
+      if (t.type === "stock_out" || t.type === "damaged" || t.type === "lost") {
+        return sum - cost;
+      }
+      // For adjustments, use the sign of the quantity
+      if (t.type === "adjustment") {
+        return t.quantity > 0 ? sum + cost : sum - cost;
+      }
+      return sum;
+    }, 0);
 
   return (
     <div className="space-y-6">
