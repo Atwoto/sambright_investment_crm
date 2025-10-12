@@ -78,6 +78,9 @@ export function ProductsManager() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [paints, setPaints] = useState<Paint[]>([]);
   const [paintings, setPaintings] = useState<Painting[]>([]);
+  const [suppliers, setSuppliers] = useState<
+    Array<{ id: string; company_name: string }>
+  >([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Paint | Painting | null>(null);
@@ -87,9 +90,18 @@ export function ProductsManager() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load products directly from Supabase
-    const loadProducts = async () => {
+    // Load products and suppliers from Supabase
+    const loadData = async () => {
       try {
+        // Load suppliers
+        const { data: suppliersData } = await supabase
+          .from("suppliers")
+          .select("id, company_name")
+          .order("company_name");
+
+        if (suppliersData) setSuppliers(suppliersData);
+
+        // Load products
         const { data, error } = await supabase
           .from("products")
           .select("*")
@@ -148,7 +160,7 @@ export function ProductsManager() {
       }
     };
 
-    loadProducts();
+    loadData();
   }, []);
 
   // Helper function to create inventory transaction
@@ -606,6 +618,32 @@ export function ProductsManager() {
                       }
                       className="col-span-3"
                     />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="supplier" className="text-right">
+                      Supplier
+                    </Label>
+                    <Select
+                      value={newPaint.supplier}
+                      onValueChange={(value) => {
+                        const supplier = suppliers.find((s) => s.id === value);
+                        setNewPaint({
+                          ...newPaint,
+                          supplier: supplier?.company_name || value,
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select supplier (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               ) : (
