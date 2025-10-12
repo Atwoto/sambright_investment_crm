@@ -118,11 +118,21 @@ export function OrdersManager() {
   const [creating, setCreating] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [clients, setClients] = useState<
+    Array<{ id: string; name: string; email: string }>
+  >([]);
 
   useEffect(() => {
-    // Load orders from Supabase
-    const loadOrders = async () => {
+    // Load orders and clients from Supabase
+    const loadData = async () => {
       try {
+        // Load clients
+        const { data: clientsData } = await supabase
+          .from("clients")
+          .select("id, name, email")
+          .order("name");
+
+        if (clientsData) setClients(clientsData);
         console.log("Attempting to load orders from Supabase...");
         const { data, error } = await supabase
           .from("orders")
@@ -151,8 +161,8 @@ export function OrdersManager() {
           tax: order.tax || 0,
           total: order.total || 0,
           status: order.status || "draft",
-          paymentStatus: "pending", // Default value
-          paymentMethod: "", // Default value
+          paymentStatus: order.payment_status || "pending",
+          paymentMethod: order.payment_method || "",
           dateCreated: order.created_at
             ? new Date(order.created_at).toISOString().split("T")[0]
             : new Date().toISOString().split("T")[0],
@@ -172,7 +182,7 @@ export function OrdersManager() {
       }
     };
 
-    loadOrders();
+    loadData();
   }, []);
 
   const filteredOrders = orders.filter((order) => {
@@ -321,7 +331,7 @@ export function OrdersManager() {
       id: localId,
       orderNumber: genOrderNumber(newOrder.type as string),
       type: newOrder.type as any,
-      clientId: "",
+      clientId: newOrder.clientId || "",
       clientName: newOrder.clientName!,
       clientEmail: newOrder.clientEmail!,
       items,
@@ -329,7 +339,7 @@ export function OrdersManager() {
       tax: Number(newOrder.tax) || 0,
       total,
       status: "draft",
-      paymentStatus: "pending",
+      paymentStatus: (newOrder.paymentStatus as any) || "pending",
       paymentMethod: newOrder.paymentMethod,
       dateCreated: new Date().toISOString().split("T")[0],
       notes: newOrder.notes,
@@ -352,6 +362,8 @@ export function OrdersManager() {
           tax: order.tax,
           total: order.total,
           status: order.status,
+          payment_status: order.paymentStatus,
+          payment_method: order.paymentMethod || null,
           discount: order.discount || 0,
           shipping_address: order.shippingAddress || "",
           billing_address: order.billingAddress || "",
@@ -447,6 +459,8 @@ export function OrdersManager() {
           tax: editOrder.tax,
           total: editOrder.total,
           status: editOrder.status,
+          payment_status: editOrder.paymentStatus,
+          payment_method: editOrder.paymentMethod || null,
           discount: editOrder.discount || 0,
           shipping_address: editOrder.shippingAddress || "",
           billing_address: editOrder.billingAddress || "",
@@ -575,15 +589,15 @@ export function OrdersManager() {
               Create Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Create New Order</DialogTitle>
               <DialogDescription>
                 Create a new quote, sale order, or invoice.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-3 py-2">
+            <div className="grid gap-3 py-2 overflow-y-auto flex-1 pr-2">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="orderType" className="text-right">
                   Type
@@ -605,18 +619,32 @@ export function OrdersManager() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="clientName" className="text-right">
-                  Client
+                <Label htmlFor="client" className="text-right">
+                  Client *
                 </Label>
-                <Input
-                  id="clientName"
-                  value={newOrder.clientName || ""}
-                  onChange={(e) =>
-                    setNewOrder({ ...newOrder, clientName: e.target.value })
-                  }
-                  className="col-span-3"
-                  placeholder="Client name"
-                />
+                <Select
+                  value={newOrder.clientId}
+                  onValueChange={(value) => {
+                    const client = clients.find((c) => c.id === value);
+                    setNewOrder({
+                      ...newOrder,
+                      clientId: value,
+                      clientName: client?.name || "",
+                      clientEmail: client?.email || "",
+                    });
+                  }}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name} - {client.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="clientEmail" className="text-right">
@@ -630,7 +658,8 @@ export function OrdersManager() {
                     setNewOrder({ ...newOrder, clientEmail: e.target.value })
                   }
                   className="col-span-3"
-                  placeholder="client@email.com"
+                  placeholder="Auto-filled from client"
+                  disabled
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -646,6 +675,28 @@ export function OrdersManager() {
                   }
                   className="col-span-3"
                 />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="paymentStatus" className="text-right">
+                  Payment Status
+                </Label>
+                <Select
+                  value={newOrder.paymentStatus || "pending"}
+                  onValueChange={(value) =>
+                    setNewOrder({ ...newOrder, paymentStatus: value as any })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select payment status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Items builder */}
@@ -826,7 +877,7 @@ export function OrdersManager() {
               </div>
             </div>
 
-            <DialogFooter className="sticky bottom-0 bg-white pt-4 border-t mt-4">
+            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-white pt-4 border-t mt-2">
               <div className="flex gap-2 w-full justify-end">
                 <Button
                   variant="outline"

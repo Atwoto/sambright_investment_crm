@@ -62,6 +62,8 @@ interface Project {
   actualCost?: number;
   location?: string;
   notes?: string;
+  images?: string[];
+  videoLink?: string;
   createdAt: string;
 }
 
@@ -78,6 +80,8 @@ export function ProjectsManager() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [newProject, setNewProject] = useState<Partial<Project>>({});
   const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   useEffect(() => {
     loadData();
@@ -118,6 +122,8 @@ export function ProjectsManager() {
         actualCost: p.actual_cost || 0,
         location: p.location,
         notes: p.notes,
+        images: p.images || [],
+        videoLink: p.video_link || "",
         createdAt: p.created_at,
       }));
 
@@ -140,6 +146,39 @@ export function ProjectsManager() {
     return matchesSearch && matchesStatus;
   });
 
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Math.random()
+        .toString(36)
+        .substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from("project-images")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Error uploading image:", error);
+        throw error;
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("project-images").getPublicUrl(filePath);
+
+      uploadedUrls.push(publicUrl);
+    }
+
+    return uploadedUrls;
+  };
+
   const handleAddProject = async () => {
     if (!newProject.name || !newProject.clientId) {
       toast.error("Please fill in required fields");
@@ -150,6 +189,14 @@ export function ProjectsManager() {
     const toastId = toast.loading("Creating project...");
 
     try {
+      // Upload images first if any
+      let imageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        setUploadingImages(true);
+        toast.loading("Uploading images...", { id: toastId });
+        imageUrls = await uploadImages(selectedFiles);
+        setUploadingImages(false);
+      }
       const projectData = {
         project_number: `PRJ-${new Date().getFullYear()}-${String(
           Math.floor(Math.random() * 1000)
@@ -165,6 +212,8 @@ export function ProjectsManager() {
         actual_cost: newProject.actualCost || 0,
         location: newProject.location || "",
         notes: newProject.notes || "",
+        images: imageUrls,
+        video_link: newProject.videoLink || "",
         created_at: new Date().toISOString(),
       };
 
@@ -179,6 +228,7 @@ export function ProjectsManager() {
       toast.success("Project created successfully", { id: toastId });
       setIsAddDialogOpen(false);
       setNewProject({});
+      setSelectedFiles([]);
       loadData();
     } catch (error) {
       console.error("Error creating project:", error);
@@ -261,15 +311,15 @@ export function ProjectsManager() {
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
                 Add a new project for a client
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-3 py-2 overflow-y-auto flex-1 pr-2">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="client" className="text-right">
                   Client *
@@ -419,8 +469,8 @@ export function ProjectsManager() {
                 />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="description" className="text-right pt-2">
                   Description
                 </Label>
                 <Textarea
@@ -432,13 +482,61 @@ export function ProjectsManager() {
                       description: e.target.value,
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 h-20"
                   placeholder="Project description..."
                 />
               </div>
 
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="images" className="text-right pt-2">
+                  Images (Optional)
+                </Label>
+                <div className="col-span-3 space-y-2">
+                  <Input
+                    id="images"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setSelectedFiles(files);
+                    }}
+                    className="cursor-pointer"
+                  />
+                  {selectedFiles.length > 0 && (
+                    <div className="text-sm text-gray-600">
+                      {selectedFiles.length} image(s) selected (
+                      {(
+                        selectedFiles.reduce((sum, f) => sum + f.size, 0) /
+                        1024 /
+                        1024
+                      ).toFixed(2)}{" "}
+                      MB)
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Upload project photos (max 10MB per image)
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="notes" className="text-right">
+                <Label htmlFor="videoLink" className="text-right">
+                  Video Link (Optional)
+                </Label>
+                <Input
+                  id="videoLink"
+                  value={newProject.videoLink || ""}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, videoLink: e.target.value })
+                  }
+                  className="col-span-3"
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="notes" className="text-right pt-2">
                   Notes
                 </Label>
                 <Textarea
@@ -447,14 +545,18 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, notes: e.target.value })
                   }
-                  className="col-span-3"
+                  className="col-span-3 h-16"
                   placeholder="Additional notes..."
                 />
               </div>
             </div>
 
-            <DialogFooter>
-              <Button onClick={handleAddProject} disabled={saving}>
+            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-white pt-4 border-t mt-2">
+              <Button
+                onClick={handleAddProject}
+                disabled={saving}
+                className="w-full sm:w-auto"
+              >
                 {saving ? "Creating..." : "Create Project"}
               </Button>
             </DialogFooter>
