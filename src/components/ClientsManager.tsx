@@ -239,37 +239,67 @@ export function ClientsManager() {
   };
 
   const handleDeleteClient = async (id: string) => {
-    // Check if client has related projects
-    const { data: relatedProjects, error: checkError } = await supabase
+    // Check if client has related projects and orders
+    const { data: relatedProjects } = await supabase
       .from("projects")
       .select("id, name")
       .eq("client_id", id);
 
-    if (checkError) {
-      console.error("Error checking related projects:", checkError);
-      toast.error("Failed to check client dependencies");
-      return;
-    }
+    const { data: relatedOrders } = await supabase
+      .from("orders")
+      .select("id, order_number")
+      .eq("client_id", id);
 
-    if (relatedProjects && relatedProjects.length > 0) {
-      const projectNames = relatedProjects.map((p) => p.name).join(", ");
-      const confirmMessage = `This client has ${relatedProjects.length} related project(s): ${projectNames}.\n\nDeleting this client will also delete all related projects. Are you sure you want to continue?`;
+    const projectCount = relatedProjects?.length || 0;
+    const orderCount = relatedOrders?.length || 0;
+
+    if (projectCount > 0 || orderCount > 0) {
+      let confirmMessage = `This client has:\n`;
+      if (projectCount > 0) {
+        const projectNames = relatedProjects!.map((p) => p.name).join(", ");
+        confirmMessage += `- ${projectCount} related project(s): ${projectNames}\n`;
+      }
+      if (orderCount > 0) {
+        const orderNumbers = relatedOrders!
+          .map((o) => o.order_number)
+          .join(", ");
+        confirmMessage += `- ${orderCount} related order(s): ${orderNumbers}\n`;
+      }
+      confirmMessage += `\nDeleting this client will also delete all related data. Are you sure you want to continue?`;
 
       if (!window.confirm(confirmMessage)) return;
 
-      // Delete related projects first
-      const toastId = toast.loading("Deleting related projects...");
-      const { error: projectDeleteError } = await supabase
-        .from("projects")
-        .delete()
-        .eq("client_id", id);
+      const toastId = toast.loading("Deleting related data...");
 
-      if (projectDeleteError) {
-        console.error("Error deleting projects:", projectDeleteError);
-        toast.error("Failed to delete related projects", { id: toastId });
-        return;
+      // Delete related orders first
+      if (orderCount > 0) {
+        const { error: orderDeleteError } = await supabase
+          .from("orders")
+          .delete()
+          .eq("client_id", id);
+
+        if (orderDeleteError) {
+          console.error("Error deleting orders:", orderDeleteError);
+          toast.error("Failed to delete related orders", { id: toastId });
+          return;
+        }
       }
-      toast.success("Related projects deleted", { id: toastId });
+
+      // Delete related projects
+      if (projectCount > 0) {
+        const { error: projectDeleteError } = await supabase
+          .from("projects")
+          .delete()
+          .eq("client_id", id);
+
+        if (projectDeleteError) {
+          console.error("Error deleting projects:", projectDeleteError);
+          toast.error("Failed to delete related projects", { id: toastId });
+          return;
+        }
+      }
+
+      toast.success("Related data deleted", { id: toastId });
     } else {
       if (!window.confirm("Are you sure you want to delete this client?"))
         return;
@@ -290,7 +320,7 @@ export function ClientsManager() {
     } catch (error: any) {
       console.error("Error deleting client:", error);
       const errorMessage = error?.message?.includes("foreign key")
-        ? "Cannot delete client: Still has related data in the system"
+        ? "Cannot delete client: Still has related data. Please contact support."
         : "Failed to delete client";
       toast.error(errorMessage, { id: toastId });
       // Reload clients on error
