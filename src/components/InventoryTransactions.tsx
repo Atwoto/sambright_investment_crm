@@ -98,13 +98,24 @@ export function InventoryTransactions() {
 
         if (suppliersData) setSuppliers(suppliersData);
 
-        // Load products
-        const { data: productsData } = await supabase
+        // Load products (full data for both dropdown and lookup)
+        const { data: productsData, error: productsError } = await supabase
           .from("products")
-          .select("id, name, product_type")
+          .select("*")
           .order("name");
 
-        if (productsData) setProducts(productsData);
+        if (productsError) throw productsError;
+
+        // Set products for dropdown (simplified data)
+        if (productsData) {
+          setProducts(
+            productsData.map((p) => ({
+              id: p.id,
+              name: p.name || p.title,
+              product_type: p.product_type,
+            }))
+          );
+        }
 
         // Load inventory transactions
         const { data: transactionsData, error: transactionsError } =
@@ -115,18 +126,12 @@ export function InventoryTransactions() {
 
         if (transactionsError) throw transactionsError;
 
-        // Then load products to get product names
-        const { data: productsData, error: productsError } = await supabase
-          .from("products")
-          .select("*");
-
-        if (productsError) throw productsError;
-
         // Create a product lookup map
-        const productLookup = productsData.reduce((acc, product) => {
-          acc[product.id] = product;
-          return acc;
-        }, {});
+        const productLookup =
+          productsData?.reduce((acc, product) => {
+            acc[product.id] = product;
+            return acc;
+          }, {} as any) || {};
 
         // Map transaction data to our interface
         const mappedTransactions = transactionsData.map((transaction) => ({
