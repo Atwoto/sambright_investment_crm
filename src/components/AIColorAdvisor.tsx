@@ -305,7 +305,7 @@ Provide exactly 3 unique schemes. Be specific about paint application and use re
 
             const data = await response.json();
             
-            const imageContent = data.choices[0]?.message?.content.find(c => c.type === 'image_url');
+            const imageContent = data.choices[0]?.message?.content.find((c: { type: string }) => c.type === 'image_url');
             const generatedImageBase64 = imageContent?.image_url?.url;
 
             if (!generatedImageBase64) {
