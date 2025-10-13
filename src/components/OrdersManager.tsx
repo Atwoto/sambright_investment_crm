@@ -389,9 +389,13 @@ export function OrdersManager() {
         );
       }
       toast.success("Order created", { id: toastId });
-    } catch (e) {
-      toast.info("Saved locally (offline or server error)", { id: toastId });
-      console.error(e);
+    } catch (e: any) {
+      const errorMsg = e?.message || "Unknown error";
+      toast.error(`Database error: ${errorMsg}`, {
+        id: toastId,
+        duration: 5000,
+      });
+      console.error("Full error:", e);
     }
     setCreating(false);
     setIsAddDialogOpen(false);
@@ -700,76 +704,84 @@ export function OrdersManager() {
               </div>
 
               {/* Items builder */}
-              <div className="space-y-2 border-t pt-3">
+              <div className="space-y-3 border-t pt-3">
                 <Label className="text-sm font-semibold">Order Items</Label>
-                <div className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-4">
-                    <Label className="mb-1 block text-xs">Item</Label>
-                    <Input
-                      value={newItem.productName || ""}
-                      onChange={(e) =>
-                        setNewItem({ ...newItem, productName: e.target.value })
-                      }
-                      placeholder="Description"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="mb-1 block text-xs">Type</Label>
-                    <Select
-                      value={(newItem.productType as any) || "painting"}
-                      onValueChange={(v) =>
-                        setNewItem({ ...newItem, productType: v as any })
-                      }
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="painting">Painting</SelectItem>
-                        <SelectItem value="paint">Paint</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="mb-1 block text-xs">Qty</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={Number(newItem.quantity) || 1}
-                      onChange={(e) =>
-                        setNewItem({
-                          ...newItem,
-                          quantity: Number(e.target.value),
-                        })
-                      }
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="mb-1 block text-xs">Price</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={Number(newItem.unitPrice) || 0}
-                      onChange={(e) =>
-                        setNewItem({
-                          ...newItem,
-                          unitPrice: Number(e.target.value),
-                        })
-                      }
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="col-span-2 flex justify-end">
+                <div className="space-y-2">
+                  <div className="grid gap-3">
+                    <div>
+                      <Label className="mb-1.5 block text-sm">
+                        Item Description
+                      </Label>
+                      <Input
+                        value={newItem.productName || ""}
+                        onChange={(e) =>
+                          setNewItem({
+                            ...newItem,
+                            productName: e.target.value,
+                          })
+                        }
+                        placeholder="Enter product or service description"
+                        className="h-10 text-base"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <Label className="mb-1.5 block text-sm">Type</Label>
+                        <Select
+                          value={(newItem.productType as any) || "painting"}
+                          onValueChange={(v) =>
+                            setNewItem({ ...newItem, productType: v as any })
+                          }
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="painting">Painting</SelectItem>
+                            <SelectItem value="paint">Paint</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-sm">Quantity</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={Number(newItem.quantity) || 1}
+                          onChange={(e) =>
+                            setNewItem({
+                              ...newItem,
+                              quantity: Number(e.target.value),
+                            })
+                          }
+                          className="h-10 text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-sm">
+                          Unit Price (KSh)
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={Number(newItem.unitPrice) || 0}
+                          onChange={(e) =>
+                            setNewItem({
+                              ...newItem,
+                              unitPrice: Number(e.target.value),
+                            })
+                          }
+                          className="h-10 text-base"
+                        />
+                      </div>
+                    </div>
                     <Button
                       variant="outline"
-                      size="sm"
                       onClick={addItemToNewOrder}
-                      className="h-9"
+                      className="w-full h-10"
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Item to Order
                     </Button>
                   </div>
                 </div>
@@ -1117,6 +1129,37 @@ export function OrdersManager() {
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
+                    {order.paymentStatus !== "paid" && (
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                        onClick={async () => {
+                          const updatedOrder = {
+                            ...order,
+                            paymentStatus: "paid" as any,
+                          };
+                          setOrders((prev) =>
+                            prev.map((o) =>
+                              o.id === order.id ? updatedOrder : o
+                            )
+                          );
+                          try {
+                            const { error } = await supabase
+                              .from("orders")
+                              .update({ payment_status: "paid" })
+                              .eq("id", order.id);
+                            if (error) throw error;
+                            toast.success("Payment marked as paid");
+                          } catch (e) {
+                            toast.error("Failed to update payment status");
+                            console.error(e);
+                          }
+                        }}
+                      >
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Mark Paid
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -1159,7 +1202,7 @@ export function OrdersManager() {
                     {order.type === "quote" && order.status === "sent" && (
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
                       >
                         Accept
                       </Button>
@@ -1381,6 +1424,47 @@ export function OrdersManager() {
                     setEditOrder({ ...editOrder, dueDate: e.target.value })
                   }
                 />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Status</Label>
+                <Select
+                  value={editOrder.status}
+                  onValueChange={(v) =>
+                    setEditOrder({ ...editOrder, status: v as any })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="accepted">Accepted</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Payment Status</Label>
+                <Select
+                  value={editOrder.paymentStatus}
+                  onValueChange={(v) =>
+                    setEditOrder({ ...editOrder, paymentStatus: v as any })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select payment status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
