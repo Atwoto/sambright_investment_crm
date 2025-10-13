@@ -460,50 +460,47 @@ Be specific, creative, and professional. Consider the house's architectural styl
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              {/* Analyze Button */}
+            {/* Analyze Button - Always Visible */}
+            <Button
+              onClick={analyzeImages}
+              disabled={uploadedImages.length === 0 || isAnalyzing}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg border-0 mt-4"
+              size="lg"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Analyzing Images...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  Analyze & Get Recommendations
+                </>
+              )}
+            </Button>
+
+            {/* Generate Images Button - Only After Analysis */}
+            {recommendations.length > 0 && (
               <Button
-                onClick={analyzeImages}
-                disabled={uploadedImages.length === 0 || isAnalyzing}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                onClick={generatePaintedImages}
+                disabled={isGeneratingImages || recommendations.length === 0}
+                className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold shadow-lg border-0 mt-3"
                 size="lg"
               >
-                {isAnalyzing ? (
+                {isGeneratingImages ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Analyzing Images...
+                    Generating Painted Previews...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-5 w-5 mr-2" />
-                    Analyze & Get Recommendations
+                    <Palette className="h-5 w-5 mr-2" />
+                    Generate Painted House Previews
                   </>
                 )}
               </Button>
-
-              {/* Generate Images Button */}
-              {recommendations.length > 0 && (
-                <Button
-                  onClick={generatePaintedImages}
-                  disabled={isGeneratingImages || recommendations.length === 0}
-                  className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700"
-                  size="lg"
-                >
-                  {isGeneratingImages ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Generating Painted Previews...
-                    </>
-                  ) : (
-                    <>
-                      <Palette className="h-5 w-5 mr-2" />
-                      Generate Painted House Previews
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            )}
           </CardContent>
         </Card>
 
