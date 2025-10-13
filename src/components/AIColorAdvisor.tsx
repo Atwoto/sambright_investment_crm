@@ -123,7 +123,7 @@ export function AIColorAdvisor() {
             "X-Title": "Sambright Investment CRM - AI Color Advisor",
           },
           body: JSON.stringify({
-            model: "deepseek/deepseek-chat",
+            model: "google/gemini-2.5-flash-image-preview",
             messages: [
               {
                 role: "user",
