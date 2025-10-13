@@ -123,7 +123,7 @@ export function AIColorAdvisor() {
             "X-Title": "Sambright Investment CRM - AI Color Advisor",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image-preview",
+            model: "google/gemini-2.5-flash-image",
             messages: [
               {
                 role: "user",
@@ -239,13 +239,12 @@ Provide exactly 3 unique schemes. Be specific about paint application and use re
       const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
       if (!apiKey) {
         toast.error(
-          "OpenRouter API key required for 3D image generation. Please add VITE_OPENROUTER_API_KEY to your .env file"
+          "OpenRouter API key required for image generation. Please add VITE_OPENROUTER_API_KEY to your .env file"
         );
         setIsGeneratingImages(false);
         return;
       }
 
-      // Get the first uploaded image as base
       const baseImage = uploadedImages[0];
       const reader = new FileReader();
 
@@ -255,11 +254,9 @@ Provide exactly 3 unique schemes. Be specific about paint application and use re
         reader.readAsDataURL(baseImage.file);
       });
 
-      // Generate 3D painted versions for each recommendation using AI
       const updatedRecommendations = await Promise.all(
-        recommendations.map(async (rec, index) => {
+        recommendations.map(async (rec) => {
           try {
-            // Use AI to generate a 3D-style painted house image
             const response = await fetch(
               "https://openrouter.ai/api/v1/chat/completions",
               {
@@ -268,41 +265,21 @@ Provide exactly 3 unique schemes. Be specific about paint application and use re
                   Authorization: `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
                   "HTTP-Referer": window.location.origin,
-                  "X-Title": "Sambright Investment CRM - AI Color Advisor 3D",
+                  "X-Title": "Sambright Investment CRM - AI Image Generation",
                 },
                 body: JSON.stringify({
-                  model: "google/gemini-2.5-flash-image-preview",
+                  model: "google/gemini-2.5-flash-image",
                   messages: [
                     {
                       role: "user",
                       content: [
                         {
                           type: "text",
-                          text: `Create a detailed 3D architectural visualization prompt for generating a painted version of this house.
-
-REQUIREMENTS FOR 3D PAINTED HOUSE:
-- Transform this house into a stunning 3D architectural rendering
-- Apply these exact paint colors: ${rec.colors.join(", ")}
-- Color scheme name: "${rec.description}"
-- Maintain the exact same architectural style and proportions
-- Add realistic 3D depth, shadows, and lighting
-- Professional architectural visualization quality
-- Photorealistic materials and textures
-- Proper perspective and dimensionality
-
-COLOR APPLICATION:
-${rec.reasoning}
-
-Generate a detailed prompt for creating a 3D painted house visualization that an AI image generator could use to create a photorealistic 3D rendering of this house painted with the specified colors.
-
-The prompt should describe:
-1. 3D architectural rendering style
-2. Specific color applications
-3. Lighting and shadows
-4. Material textures
-5. Professional quality details
-
-Provide ONLY the detailed prompt description, nothing else.`,
+                          text: `Transform the following house image into a photorealistic, 3D architectural rendering.
+- Apply the color scheme: ${rec.description} (${rec.colors.join(", ")}).
+- Use the application details: ${rec.reasoning}.
+- The final image should be a high-quality, professional visualization with realistic lighting and shadows, maintaining the original architectural style.
+- Return ONLY the generated image.`,
                         },
                         {
                           type: "image_url",
@@ -311,144 +288,44 @@ Provide ONLY the detailed prompt description, nothing else.`,
                       ],
                     },
                   ],
+                  // Request image output
+                  "provider_extra_parameters": {
+                    "output_image": true
+                  }
                 }),
               }
             );
 
             if (!response.ok) {
-              throw new Error(
-                `Failed to generate 3D prompt for ${rec.description}`
-              );
+                const errorData = await response.json();
+                throw new Error(
+                    `Failed to generate image for ${rec.description}: ${errorData.error?.message}`
+                );
             }
 
             const data = await response.json();
-            const aiPrompt = data.choices[0]?.message?.content;
+            
+            const imageContent = data.choices[0]?.message?.content.find(c => c.type === 'image_url');
+            const generatedImageBase64 = imageContent?.image_url?.url;
 
-            // For now, create an enhanced 3D-style composite since we can't directly generate images
-            // In a full implementation, you'd use the aiPrompt with DALL-E, Midjourney, or Stable Diffusion
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-
-            if (!ctx) {
-              return {
-                ...rec,
-                generatedImage: uploadedImages[0].preview,
-                isGenerating: false,
-              };
+            if (!generatedImageBase64) {
+              throw new Error(`No image generated for ${rec.description}. AI response: ${JSON.stringify(data)}`);
             }
-
-            canvas.width = 500;
-            canvas.height = 400;
-
-            const enhanced3DImage = await new Promise<string>((resolve) => {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-
-              img.onload = () => {
-                // Create 3D-style background
-                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, "#87CEEB");
-                gradient.addColorStop(1, "#E0F6FF");
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 500, 400);
-
-                // Add 3D ground plane
-                ctx.fillStyle = "#90EE90";
-                ctx.beginPath();
-                ctx.moveTo(0, 350);
-                ctx.lineTo(500, 350);
-                ctx.lineTo(450, 400);
-                ctx.lineTo(50, 400);
-                ctx.closePath();
-                ctx.fill();
-
-                // Draw main house with 3D perspective
-                ctx.save();
-                ctx.translate(50, 50);
-
-                // Apply color tinting to simulate paint
-                ctx.globalCompositeOperation = "multiply";
-                ctx.drawImage(img, 0, 0, 400, 300);
-
-                ctx.fillStyle = rec.colors[0] || "#D2B48C";
-                ctx.globalAlpha = 0.3;
-                ctx.fillRect(0, 0, 400, 300);
-
-                // Add 3D depth effect - right side shadow
-                ctx.globalCompositeOperation = "source-over";
-                ctx.globalAlpha = 0.2;
-                ctx.fillStyle = "#000";
-                ctx.fillRect(400, 20, 30, 280);
-
-                // Add 3D depth effect - bottom shadow
-                ctx.fillRect(20, 300, 410, 20);
-
-                ctx.restore();
-
-                // Add professional 3D title
-                ctx.fillStyle = "rgba(0,0,0,0.9)";
-                ctx.fillRect(0, 0, 500, 40);
-
-                ctx.fillStyle = "white";
-                ctx.font = "bold 18px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText(`3D Visualization: ${rec.description}`, 250, 25);
-
-                // Add 3D color palette with depth
-                const paletteY = 320;
-                ctx.fillStyle = "rgba(255,255,255,0.95)";
-                ctx.fillRect(20, paletteY, 460, 50);
-
-                // Add shadow to palette
-                ctx.fillStyle = "rgba(0,0,0,0.1)";
-                ctx.fillRect(25, paletteY + 5, 460, 50);
-
-                // Draw 3D color swatches
-                rec.colors.forEach((color, i) => {
-                  // Main swatch
-                  ctx.fillStyle = color;
-                  ctx.fillRect(40 + i * 50, paletteY + 10, 35, 25);
-
-                  // 3D depth effect
-                  ctx.fillStyle = "rgba(0,0,0,0.3)";
-                  ctx.fillRect(75 + i * 50, paletteY + 15, 5, 25);
-                  ctx.fillRect(40 + i * 50, paletteY + 35, 35, 5);
-
-                  // Border
-                  ctx.strokeStyle = "#333";
-                  ctx.lineWidth = 2;
-                  ctx.strokeRect(40 + i * 50, paletteY + 10, 35, 25);
-                });
-
-                // Add 3D branding
-                ctx.fillStyle = "#333";
-                ctx.font = "bold 14px Arial";
-                ctx.textAlign = "right";
-                ctx.fillText("3D AI Painted Visualization", 480, paletteY + 45);
-
-                resolve(canvas.toDataURL("image/jpeg", 0.95));
-              };
-
-              img.onerror = () => {
-                resolve(uploadedImages[0].preview);
-              };
-
-              img.src = uploadedImages[0].preview;
-            });
 
             return {
               ...rec,
-              generatedImage: enhanced3DImage,
+              generatedImage: generatedImageBase64,
               isGenerating: false,
             };
           } catch (error) {
             console.error(
-              `Error generating 3D image for ${rec.description}:`,
+              `Error generating image for ${rec.description}:`,
               error
             );
+            toast.error(`Failed to generate image for "${rec.description}".`);
             return {
               ...rec,
-              generatedImage: uploadedImages[0].preview,
+              generatedImage: uploadedImages[0].preview, // fallback to original
               isGenerating: false,
             };
           }
@@ -456,10 +333,10 @@ Provide ONLY the detailed prompt description, nothing else.`,
       );
 
       setRecommendations(updatedRecommendations);
-      toast.success("Generated 3D painted house visualizations!");
+      toast.success("Generated AI painted house visualizations!");
     } catch (error: any) {
-      console.error("Error generating 3D painted images:", error);
-      toast.error(error.message || "Failed to generate 3D painted images");
+      console.error("Error generating painted images:", error);
+      toast.error(error.message || "Failed to generate painted images");
     } finally {
       setIsGeneratingImages(false);
     }
