@@ -95,11 +95,7 @@ export function AIColorAdvisor() {
 
       const base64Images = await Promise.all(imagePromises);
 
-      const webhookUrl = "YOUR_N8N_WEBHOOK_URL_HERE"; // <-- IMPORTANT: REPLACE WITH YOUR N8N WEBHOOK URL
-
-      if (webhookUrl === "YOUR_N8N_WEBHOOK_URL_HERE") {
-        throw new Error("Please replace YOUR_N8N_WEBHOOK_URL_HERE in the code with your actual n8n webhook URL.");
-      }
+      const webhookUrl = "https://n8n-n2hx.onrender.com/webhook-test/ai-color-advisor";
 
       const response = await fetch(webhookUrl, {
         method: "POST",

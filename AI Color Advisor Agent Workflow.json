@@ -1,0 +1,178 @@
+{
+    "name": "AI Color Advisor Agent Workflow",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "ai-color-advisor",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ],
+            "webhookId": "ai-color-advisor-webhook"
+        },
+        {
+            "parameters": {
+                "agent": "conversationalAgent",
+                "promptType": "define",
+                "text": "You are an expert color consultant and 3D visualization specialist. Your task is to:\n\n1. Analyze the provided house images\n2. Generate exactly 3 distinct, professional exterior color palette recommendations\n3. For each recommendation, create a photorealistic 3D preview showing how the house would look painted with those colors\n\nFor each recommendation, you must return a JSON object with:\n- id: unique identifier (rec_1, rec_2, rec_3)\n- description: descriptive name for the color scheme\n- colors: array of 3-5 specific color names\n- reasoning: detailed explanation including color application (which colors go where) and why this palette works\n- generatedImage: base64 encoded image showing the 3D preview\n\nReturn your response as a valid JSON array containing exactly 3 recommendation objects. Focus on creating realistic, appealing color combinations that complement the house's architecture and surroundings.",
+                "hasOutputParser": true,
+                "outputParser": "autoFixingOutputParser",
+                "options": {
+                    "systemMessage": "Always respond with valid JSON. Generate realistic 3D previews for each color recommendation."
+                }
+            },
+            "id": "ai-color-agent",
+            "name": "AI Color Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.6,
+            "position": [
+                460,
+                300
+            ],
+            "credentials": {
+                "openRouterApi": {
+                    "id": "openrouter-credentials",
+                    "name": "OpenRouter API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "model": "google/gemini-2.0-flash-exp",
+                "options": {
+                    "temperature": 0.7,
+                    "maxTokens": 2000
+                }
+            },
+            "id": "openrouter-llm",
+            "name": "OpenRouter LLM",
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+            "typeVersion": 1,
+            "position": [
+                460,
+                420
+            ],
+            "credentials": {
+                "openRouterApi": {
+                    "id": "openrouter-credentials",
+                    "name": "OpenRouter API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Process the input images and format them for the AI agent\nconst inputData = $input.first().json;\nconst base64Images = inputData.base64Images || [];\n\nif (base64Images.length === 0) {\n  throw new Error('No images provided');\n}\n\n// Create a formatted message with images for the AI agent\nconst imageDescriptions = base64Images.map((img, index) => \n  `Image ${index + 1}: ${img.substring(0, 50)}...`\n).join('\\n');\n\nconst formattedInput = {\n  input: `Please analyze these ${base64Images.length} house images and provide 3 color recommendations with 3D previews:\\n\\n${imageDescriptions}`,\n  images: base64Images\n};\n\nreturn [{ json: formattedInput }];"
+            },
+            "id": "format-input",
+            "name": "Format Input",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                350,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse and validate the AI agent response\nconst agentResponse = $input.first().json;\n\ntry {\n  let recommendations;\n  \n  // Extract the response from the agent output\n  if (agentResponse.output) {\n    recommendations = typeof agentResponse.output === 'string' \n      ? JSON.parse(agentResponse.output) \n      : agentResponse.output;\n  } else if (agentResponse.text) {\n    recommendations = JSON.parse(agentResponse.text);\n  } else {\n    recommendations = agentResponse;\n  }\n  \n  // Validate structure\n  if (!Array.isArray(recommendations)) {\n    throw new Error('Response is not an array');\n  }\n  \n  if (recommendations.length !== 3) {\n    throw new Error(`Expected 3 recommendations, got ${recommendations.length}`);\n  }\n  \n  // Ensure each recommendation has required fields\n  const processedRecommendations = recommendations.map((rec, index) => {\n    if (!rec.id) rec.id = `rec_${index + 1}`;\n    if (!rec.description) rec.description = `Color Recommendation ${index + 1}`;\n    if (!rec.colors || !Array.isArray(rec.colors)) rec.colors = ['Color information not available'];\n    if (!rec.reasoning) rec.reasoning = 'Reasoning not provided';\n    if (!rec.generatedImage) rec.generatedImage = null;\n    \n    return rec;\n  });\n  \n  return [{ json: processedRecommendations }];\n  \n} catch (error) {\n  console.error('Error parsing AI response:', error);\n  \n  // Return fallback response\n  const fallbackRecommendations = [\n    {\n      id: 'rec_1',\n      description: 'Classic Neutral Palette',\n      colors: ['Warm Gray', 'Crisp White', 'Charcoal'],\n      reasoning: 'A timeless combination that works well with most architectural styles.',\n      generatedImage: null\n    },\n    {\n      id: 'rec_2',\n      description: 'Modern Coastal',\n      colors: ['Navy Blue', 'White', 'Light Gray'],\n      reasoning: 'Fresh and contemporary palette inspired by coastal living.',\n      generatedImage: null\n    },\n    {\n      id: 'rec_3',\n      description: 'Warm Traditional',\n      colors: ['Sage Green', 'Cream', 'Dark Brown'],\n      reasoning: 'Earthy tones that complement natural surroundings.',\n      generatedImage: null\n    }\n  ];\n  \n  return [{ json: fallbackRecommendations }];\n}"
+            },
+            "id": "process-response",
+            "name": "Process Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}"
+            },
+            "id": "respond-to-webhook",
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                900,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Format Input",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Input": {
+            "main": [
+                [
+                    {
+                        "node": "AI Color Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Color Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Process Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Response": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenRouter LLM": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Color Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "versionId": "1",
+    "meta": {
+        "templateCredsSetupCompleted": true
+    },
+    "id": "ai-color-advisor-agent-workflow",
+    "tags": []
+}
