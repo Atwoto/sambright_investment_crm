@@ -95,14 +95,20 @@ export function AIColorAdvisor() {
 
       const base64Images = await Promise.all(imagePromises);
 
-      const webhookUrl = "https://n8n-n2hx.onrender.com/webhook-test/ai-color-advisor";
+      // --- MODIFICATION #1: Use the PRODUCTION Webhook URL ---
+      const webhookUrl = "https://n8n-n2hx.onrender.com/webhook/ai-color-advisor";
 
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ base64Images }),
+        // --- MODIFICATION #2: Wrap the data in a "body" object to match n8n ---
+        body: JSON.stringify({
+          body: {
+            base64Images,
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -112,7 +118,8 @@ export function AIColorAdvisor() {
 
       const result = await response.json();
 
-      if (!result || result.length === 0) {
+      // --- MODIFICATION #3: Read the results from the "recommendations" key ---
+      if (!result || !Array.isArray(result) || result.length === 0) {
         throw new Error("The n8n workflow returned no recommendations.");
       }
 
