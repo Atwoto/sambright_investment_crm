@@ -236,67 +236,104 @@ Provide exactly 3 unique schemes. Be specific about paint application and use re
     setIsGeneratingImages(true);
 
     try {
-      // Create visual concept previews for each recommendation
-      const updatedRecommendations = recommendations.map((rec, index) => {
-        // Create a better SVG preview with the recommended colors
-        const svgPreview = `
-          <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="sky${index}" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#E0F6FF;stop-opacity:1" />
-              </linearGradient>
-            </defs>
-            <!-- Sky background -->
-            <rect width="400" height="300" fill="url(#sky${index})"/>
-            <!-- Ground -->
-            <rect x="0" y="250" width="400" height="50" fill="#90EE90"/>
-            <!-- House main structure -->
-            <rect x="80" y="120" width="240" height="130" fill="${
-              rec.colors[0] || "#D2B48C"
-            }" stroke="#333" stroke-width="2"/>
-            <!-- Roof -->
-            <polygon points="70,120 200,70 330,120" fill="${
-              rec.colors[2] || "#8B4513"
-            }" stroke="#333" stroke-width="2"/>
-            <!-- Door -->
-            <rect x="180" y="180" width="40" height="70" fill="${
-              rec.colors[1] || "#8B4513"
-            }" stroke="#333" stroke-width="1"/>
-            <!-- Windows -->
-            <rect x="100" y="140" width="50" height="40" fill="#87CEEB" stroke="#333" stroke-width="1"/>
-            <rect x="250" y="140" width="50" height="40" fill="#87CEEB" stroke="#333" stroke-width="1"/>
-            <!-- Window frames -->
-            <rect x="95" y="135" width="60" height="50" fill="none" stroke="#FFFFFF" stroke-width="3"/>
-            <rect x="245" y="135" width="60" height="50" fill="none" stroke="#FFFFFF" stroke-width="3"/>
-            <!-- Door frame -->
-            <rect x="175" y="175" width="50" height="80" fill="none" stroke="#FFFFFF" stroke-width="3"/>
-            <!-- Title -->
-            <rect x="0" y="0" width="400" height="30" fill="rgba(0,0,0,0.8)"/>
-            <text x="200" y="20" text-anchor="middle" font-family="Arial" font-size="14" fill="white" font-weight="bold">
-              ${rec.description}
-            </text>
-            <!-- Color palette display -->
-            <g transform="translate(10, 40)">
-              ${rec.colors
-                .map(
-                  (color, i) => `
-                <rect x="${
-                  i * 25
-                }" y="0" width="20" height="20" fill="${color}" stroke="#333" stroke-width="1"/>
-              `
-                )
-                .join("")}
-            </g>
-          </svg>
-        `;
+      // Create painted versions using your actual house image
+      const updatedRecommendations = await Promise.all(
+        recommendations.map(async (rec, index) => {
+          try {
+            // Create a canvas to composite your house image with color overlays
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-        return {
-          ...rec,
-          generatedImage: `data:image/svg+xml;base64,${btoa(svgPreview)}`,
-          isGenerating: false,
-        };
-      });
+            if (!ctx) {
+              // Fallback if canvas context is not available
+              return {
+                ...rec,
+                generatedImage: uploadedImages[0].preview,
+                isGenerating: false,
+              };
+            }
+
+            canvas.width = 400;
+            canvas.height = 300;
+
+            // Load your actual house image
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+
+            const paintedImage = await new Promise<string>((resolve) => {
+              img.onload = () => {
+                // Draw your actual house image as base
+                ctx.drawImage(img, 0, 0, 400, 300);
+
+                // Add color tint overlay to simulate different paint colors
+                ctx.globalCompositeOperation = "multiply";
+                ctx.fillStyle = rec.colors[0] || "#D2B48C";
+                ctx.globalAlpha = 0.4; // Make it more subtle
+                ctx.fillRect(0, 0, 400, 300);
+
+                // Reset composition mode
+                ctx.globalCompositeOperation = "source-over";
+                ctx.globalAlpha = 1;
+
+                // Add title bar
+                ctx.fillStyle = "rgba(0,0,0,0.8)";
+                ctx.fillRect(0, 0, 400, 35);
+
+                // Add color scheme name
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(rec.description, 200, 22);
+
+                // Add color palette at bottom
+                const paletteY = 260;
+                ctx.fillStyle = "rgba(255,255,255,0.9)";
+                ctx.fillRect(0, paletteY, 400, 40);
+
+                // Draw color swatches
+                rec.colors.forEach((color, i) => {
+                  ctx.fillStyle = color;
+                  ctx.fillRect(20 + i * 35, paletteY + 8, 25, 25);
+                  ctx.strokeStyle = "#333";
+                  ctx.lineWidth = 2;
+                  ctx.strokeRect(20 + i * 35, paletteY + 8, 25, 25);
+                });
+
+                // Add "Painted with AI Colors" text
+                ctx.fillStyle = "#333";
+                ctx.font = "12px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText("Painted with AI Colors", 380, paletteY + 25);
+
+                resolve(canvas.toDataURL("image/jpeg", 0.9));
+              };
+
+              img.onerror = () => {
+                // Fallback: just use the original image with text overlay
+                resolve(uploadedImages[0].preview);
+              };
+
+              img.src = uploadedImages[0].preview;
+            });
+
+            return {
+              ...rec,
+              generatedImage: paintedImage,
+              isGenerating: false,
+            };
+          } catch (error) {
+            console.error(
+              `Error creating painted version for ${rec.description}:`,
+              error
+            );
+            return {
+              ...rec,
+              generatedImage: uploadedImages[0].preview, // Fallback to original
+              isGenerating: false,
+            };
+          }
+        })
+      );
 
       setRecommendations(updatedRecommendations);
       toast.success("Generated painted house concept previews!");
