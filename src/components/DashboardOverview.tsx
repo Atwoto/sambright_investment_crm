@@ -136,9 +136,9 @@ export function DashboardOverview() {
       if (transactionsError) throw transactionsError;
 
       // Convert transactions to activity feed items
-      const recentActivity = recentTransactions.map((transaction, index) => {
+      const recentActivity = recentTransactions.map((transaction) => {
         let message = "";
-        let type = "restock";
+        let type: "sale" | "restock" | "new_client" | "low_stock" = "restock";
 
         switch (transaction.type) {
           case "stock_in":
@@ -206,79 +206,17 @@ export function DashboardOverview() {
         lowStockItems: lowStockItems?.length || 0,
         paintingsAvailable: paintingsCount || 0,
         paintsInStock: paintsCount || 0,
-        recentActivity:
-          recentActivity.length > 0
-            ? recentActivity
-            : [
-                {
-                  id: "1",
-                  type: "sale",
-                  message: 'Sold "Sunset Landscape" to Gallery Aurora for $850',
-                  timestamp: "2 hours ago",
-                },
-                {
-                  id: "2",
-                  type: "low_stock",
-                  message: "Titanium White 500ml running low (3 units left)",
-                  timestamp: "4 hours ago",
-                },
-                {
-                  id: "3",
-                  type: "new_client",
-                  message: "New client: Modern Interiors Design Studio",
-                  timestamp: "1 day ago",
-                },
-                {
-                  id: "4",
-                  type: "restock",
-                  message: "Restocked Winsor & Newton watercolors (24 units)",
-                  timestamp: "2 days ago",
-                },
-              ],
+        recentActivity: recentActivity,
       });
 
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading dashboard data:", error);
-      // Fallback to mock data on error
-      setTimeout(() => {
-        setStats({
-          totalProducts: 156,
-          totalClients: 89,
-          pendingOrders: 12,
-          monthlyRevenue: 24680,
-          lowStockItems: 8,
-          paintingsAvailable: 47,
-          paintsInStock: 109,
-          recentActivity: [
-            {
-              id: "1",
-              type: "sale",
-              message: 'Sold "Sunset Landscape" to Gallery Aurora for $850',
-              timestamp: "2 hours ago",
-            },
-            {
-              id: "2",
-              type: "low_stock",
-              message: "Titanium White 500ml running low (3 units left)",
-              timestamp: "4 hours ago",
-            },
-            {
-              id: "3",
-              type: "new_client",
-              message: "New client: Modern Interiors Design Studio",
-              timestamp: "1 day ago",
-            },
-            {
-              id: "4",
-              type: "restock",
-              message: "Restocked Winsor & Newton watercolors (24 units)",
-              timestamp: "2 days ago",
-            },
-          ],
-        });
-        setLoading(false);
-      }, 1000);
+      const errorMsg = error?.message || "Unknown error";
+      alert(
+        `Failed to load dashboard data: ${errorMsg}\n\nPlease check your database connection.`
+      );
+      setLoading(false);
     }
   };
 
@@ -360,7 +298,7 @@ export function DashboardOverview() {
               {formatCurrency(stats.monthlyRevenue)}
             </div>
             <p className="text-xs text-muted-foreground">
-              +12.3% from last month
+              This month's revenue
             </p>
           </CardContent>
         </Card>
@@ -374,7 +312,9 @@ export function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalClients}</div>
-            <p className="text-xs text-muted-foreground">+4 new this month</p>
+            <p className="text-xs text-muted-foreground">
+              Total clients in database
+            </p>
           </CardContent>
         </Card>
 
@@ -387,7 +327,9 @@ export function DashboardOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">$3,240 total value</p>
+            <p className="text-xs text-muted-foreground">
+              Total orders in database
+            </p>
           </CardContent>
         </Card>
 
@@ -423,17 +365,9 @@ export function DashboardOverview() {
               <Badge variant="secondary">{stats.paintingsAvailable}</Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm">Sold This Month</span>
-              <Badge variant="default">8</Badge>
+              <span className="text-sm">Total Paintings</span>
+              <Badge variant="default">{stats.paintingsAvailable}</Badge>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">On Consignment</span>
-              <Badge variant="outline">12</Badge>
-            </div>
-            <Progress value={75} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              75% of monthly sales target reached
-            </p>
           </CardContent>
         </Card>
 
@@ -460,10 +394,6 @@ export function DashboardOverview() {
               <span className="text-sm">Low Stock</span>
               <Badge variant="destructive">{stats.lowStockItems}</Badge>
             </div>
-            <Progress value={85} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              85% of inventory is well-stocked
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -481,20 +411,32 @@ export function DashboardOverview() {
           <CardDescription>Latest updates in your business</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {stats.recentActivity.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start space-x-3 pb-3 border-b border-gray-100 last:border-0"
-              >
-                <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">{activity.message}</p>
-                  <p className="text-xs text-gray-500">{activity.timestamp}</p>
+          {stats.recentActivity.length > 0 ? (
+            <div className="space-y-4">
+              {stats.recentActivity.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start space-x-3 pb-3 border-b border-gray-100 last:border-0"
+                >
+                  <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">{activity.message}</p>
+                    <p className="text-xs text-gray-500">
+                      {activity.timestamp}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm">No recent activity</p>
+              <p className="text-xs mt-1">
+                Activity will appear here as you use the system
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

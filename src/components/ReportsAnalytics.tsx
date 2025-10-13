@@ -1,16 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Badge } from './ui/badge';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import React, { useState, useEffect } from "react";
+import { supabase } from "../utils/supabase/client";
+import { formatCurrency } from "../utils/currency";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Badge } from "./ui/badge";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -18,12 +32,12 @@ import {
   Pie,
   Cell,
   Area,
-  AreaChart
-} from 'recharts';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Package, 
+  AreaChart,
+} from "recharts";
+import {
+  TrendingUp,
+  DollarSign,
+  Package,
   Users,
   Download,
   Calendar,
@@ -31,8 +45,8 @@ import {
   Eye,
   ShoppingCart,
   Palette,
-  Brush
-} from 'lucide-react';
+  Brush,
+} from "lucide-react";
 
 interface SalesData {
   month: string;
@@ -64,69 +78,256 @@ interface InventoryAlert {
 }
 
 export function ReportsAnalytics() {
-  const [selectedPeriod, setSelectedPeriod] = useState('12months');
+  const [selectedPeriod, setSelectedPeriod] = useState("12months");
   const [salesData, setSalesData] = useState<SalesData[]>([]);
-  const [productPerformance, setProductPerformance] = useState<ProductPerformance[]>([]);
+  const [productPerformance, setProductPerformance] = useState<
+    ProductPerformance[]
+  >([]);
   const [clientSegments, setClientSegments] = useState<ClientSegment[]>([]);
   const [inventoryAlerts, setInventoryAlerts] = useState<InventoryAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadReportsData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch orders for sales data
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (ordersError) throw ordersError;
+
+      // Process sales data by month
+      const monthlyData: {
+        [key: string]: { paintings: number; paints: number; total: number };
+      } = {};
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      // Initialize last 12 months
+      const now = new Date();
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, "0")}`;
+        monthlyData[monthKey] = { paintings: 0, paints: 0, total: 0 };
+      }
+
+      // Aggregate orders by month
+      ordersData?.forEach((order) => {
+        const date = new Date(order.created_at);
+        const monthKey = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, "0")}`;
+
+        if (monthlyData[monthKey]) {
+          const items = order.items || [];
+          items.forEach((item: any) => {
+            const amount = item.totalPrice || 0;
+            if (item.productType === "painting") {
+              monthlyData[monthKey].paintings += amount;
+            } else {
+              monthlyData[monthKey].paints += amount;
+            }
+            monthlyData[monthKey].total += amount;
+          });
+        }
+      });
+
+      const salesChartData = Object.keys(monthlyData).map((key) => {
+        const [year, month] = key.split("-");
+        return {
+          month: monthNames[parseInt(month) - 1],
+          paintings: Math.round(monthlyData[key].paintings),
+          paints: Math.round(monthlyData[key].paints),
+          total: Math.round(monthlyData[key].total),
+        };
+      });
+
+      setSalesData(salesChartData);
+
+      // Fetch products for performance data
+      const { data: productsData, error: productsError } = await supabase
+        .from("products")
+        .select("*");
+
+      if (productsError) throw productsError;
+
+      // Calculate product performance from orders
+      const productStats: {
+        [key: string]: {
+          sold: number;
+          revenue: number;
+          category: string;
+          name: string;
+        };
+      } = {};
+
+      ordersData?.forEach((order) => {
+        const items = order.items || [];
+        items.forEach((item: any) => {
+          const key = item.productName || item.productId;
+          if (!productStats[key]) {
+            productStats[key] = {
+              name: item.productName || "Unknown Product",
+              sold: 0,
+              revenue: 0,
+              category:
+                item.productType === "painting" ? "Paintings" : "Paints",
+            };
+          }
+          productStats[key].sold += item.quantity || 0;
+          productStats[key].revenue += item.totalPrice || 0;
+        });
+      });
+
+      const performanceData = Object.values(productStats)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
+
+      setProductPerformance(performanceData);
+
+      // Fetch clients for segmentation
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select("*");
+
+      if (clientsError) throw clientsError;
+
+      // Calculate client segments (simplified - you can enhance this based on your business logic)
+      const totalClients = clientsData?.length || 0;
+      const segments = [
+        {
+          name: "Galleries",
+          value: Math.round(totalClients * 0.35),
+          color: "#8884d8",
+        },
+        {
+          name: "Individual Collectors",
+          value: Math.round(totalClients * 0.25),
+          color: "#82ca9d",
+        },
+        {
+          name: "Interior Designers",
+          value: Math.round(totalClients * 0.2),
+          color: "#ffc658",
+        },
+        {
+          name: "Artists",
+          value: Math.round(totalClients * 0.15),
+          color: "#ff7300",
+        },
+        {
+          name: "Other",
+          value: Math.round(totalClients * 0.05),
+          color: "#00ff00",
+        },
+      ];
+
+      setClientSegments(segments);
+
+      // Fetch low stock items
+      const { data: lowStockData, error: lowStockError } = await supabase
+        .from("products")
+        .select("*")
+        .lt("stock_level", "min_stock_level")
+        .limit(10);
+
+      if (lowStockError) throw lowStockError;
+
+      const alerts = (lowStockData || []).map((product) => ({
+        id: product.id,
+        productName: product.name,
+        currentStock: product.stock_level || 0,
+        minStock: product.min_stock_level || 5,
+        category: product.product_type === "painting" ? "Painting" : "Paint",
+        daysOfStock: Math.floor((product.stock_level || 0) / 0.5), // Simplified calculation
+      }));
+
+      setInventoryAlerts(alerts);
+      setLoading(false);
+    } catch (error: any) {
+      console.error("Error loading reports data:", error);
+      const errorMsg = error?.message || "Unknown error";
+      alert(
+        `Failed to load reports data: ${errorMsg}\n\nPlease check your database connection.`
+      );
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Mock data - in real implementation, fetch from Supabase
-    setSalesData([
-      { month: 'Jan', paintings: 2400, paints: 1200, total: 3600 },
-      { month: 'Feb', paintings: 1800, paints: 1500, total: 3300 },
-      { month: 'Mar', paintings: 3200, paints: 1800, total: 5000 },
-      { month: 'Apr', paintings: 2800, paints: 1600, total: 4400 },
-      { month: 'May', paintings: 3600, paints: 2200, total: 5800 },
-      { month: 'Jun', paintings: 4200, paints: 2000, total: 6200 },
-      { month: 'Jul', paintings: 3800, paints: 2400, total: 6200 },
-      { month: 'Aug', paintings: 4600, paints: 2800, total: 7400 },
-      { month: 'Sep', paintings: 4200, paints: 2600, total: 6800 },
-      { month: 'Oct', paintings: 3800, paints: 2200, total: 6000 },
-      { month: 'Nov', paintings: 4400, paints: 2800, total: 7200 },
-      { month: 'Dec', paintings: 5200, paints: 3200, total: 8400 }
-    ]);
-
-    setProductPerformance([
-      { name: 'Sunset Landscape', sold: 15, revenue: 12750, category: 'Paintings' },
-      { name: 'Abstract Series', sold: 12, revenue: 9600, category: 'Paintings' },
-      { name: 'Titanium White 500ml', sold: 48, revenue: 1199, category: 'Paints' },
-      { name: 'Portrait Collection', sold: 8, revenue: 6400, category: 'Paintings' },
-      { name: 'Ultramarine Blue 200ml', sold: 36, revenue: 666, category: 'Paints' },
-      { name: 'Urban Sketches', sold: 10, revenue: 4500, category: 'Paintings' },
-      { name: 'Oil Paint Set', sold: 24, revenue: 2880, category: 'Paints' },
-      { name: 'Watercolor Studies', sold: 6, revenue: 2700, category: 'Paintings' }
-    ]);
-
-    setClientSegments([
-      { name: 'Galleries', value: 35, color: '#8884d8' },
-      { name: 'Individual Collectors', value: 25, color: '#82ca9d' },
-      { name: 'Interior Designers', value: 20, color: '#ffc658' },
-      { name: 'Artists', value: 15, color: '#ff7300' },
-      { name: 'Other', value: 5, color: '#00ff00' }
-    ]);
-
-    setInventoryAlerts([
-      { id: '1', productName: 'Titanium White 500ml', currentStock: 3, minStock: 5, category: 'Paint', daysOfStock: 8 },
-      { id: '2', productName: 'Canvas 24x36', currentStock: 2, minStock: 6, category: 'Supply', daysOfStock: 5 },
-      { id: '3', productName: 'Cadmium Red 100ml', currentStock: 1, minStock: 4, category: 'Paint', daysOfStock: 3 },
-      { id: '4', productName: 'Professional Brushes Set', currentStock: 4, minStock: 8, category: 'Supply', daysOfStock: 12 }
-    ]);
-  }, []);
+    loadReportsData();
+  }, [selectedPeriod]);
 
   const totalRevenue = salesData.reduce((sum, data) => sum + data.total, 0);
-  const totalPaintingsSold = productPerformance.filter(p => p.category === 'Paintings').reduce((sum, p) => sum + p.sold, 0);
-  const averageOrderValue = totalRevenue / (totalPaintingsSold + productPerformance.filter(p => p.category === 'Paints').reduce((sum, p) => sum + p.sold, 0));
+  const totalPaintingsSold = productPerformance
+    .filter((p) => p.category === "Paintings")
+    .reduce((sum, p) => sum + p.sold, 0);
+  const averageOrderValue =
+    totalRevenue /
+    (totalPaintingsSold +
+      productPerformance
+        .filter((p) => p.category === "Paints")
+        .reduce((sum, p) => sum + p.sold, 0));
 
-  const topProducts = [...productPerformance].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
-  const lowStockItems = inventoryAlerts.filter(item => item.currentStock <= item.minStock);
+  const topProducts = [...productPerformance]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+  const lowStockItems = inventoryAlerts.filter(
+    (item) => item.currentStock <= item.minStock
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Reports & Analytics
+            </h2>
+            <p className="text-gray-600">Loading data...</p>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="space-y-0 pb-2">
+                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                <div className="h-8 bg-gray-200 rounded w-16 mt-2"></div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h2>
-          <p className="text-gray-600">Business insights and performance metrics</p>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Reports & Analytics
+          </h2>
+          <p className="text-gray-600">
+            Business insights and performance metrics
+          </p>
         </div>
         <div className="flex items-center space-x-4">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -140,9 +341,13 @@ export function ReportsAnalytics() {
               <SelectItem value="custom">Custom range</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={loadReportsData}
+            disabled={loading}
+          >
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Refresh
           </Button>
         </div>
       </div>
@@ -155,49 +360,59 @@ export function ReportsAnalytics() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${totalRevenue.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +15.3% from last period
+              Total revenue from all orders
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paintings Sold</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Paintings Sold
+            </CardTitle>
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPaintingsSold}</div>
             <p className="text-xs text-muted-foreground">
-              +8.2% from last period
+              Total paintings sold
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Order Value
+            </CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${averageOrderValue.toFixed(0)}</div>
+            <div className="text-2xl font-bold">
+              ${averageOrderValue.toFixed(0)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +4.1% from last period
+              Average order value
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Low Stock Items
+            </CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{lowStockItems.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Requires attention
-            </p>
+            <div className="text-2xl font-bold text-orange-600">
+              {lowStockItems.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Requires attention</p>
           </CardContent>
         </Card>
       </div>
@@ -215,7 +430,9 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Monthly Revenue Trends</CardTitle>
-                <CardDescription>Revenue breakdown by product category</CardDescription>
+                <CardDescription>
+                  Revenue breakdown by product category
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -223,9 +440,21 @@ export function ReportsAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, '']} />
-                    <Area type="monotone" dataKey="paintings" stackId="1" stroke="#8884d8" fill="#8884d8" />
-                    <Area type="monotone" dataKey="paints" stackId="1" stroke="#82ca9d" fill="#82ca9d" />
+                    <Tooltip formatter={(value) => [`$${value}`, ""]} />
+                    <Area
+                      type="monotone"
+                      dataKey="paintings"
+                      stackId="1"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="paints"
+                      stackId="1"
+                      stroke="#82ca9d"
+                      fill="#82ca9d"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -242,8 +471,15 @@ export function ReportsAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, 'Total Sales']} />
-                    <Line type="monotone" dataKey="total" stroke="#8884d8" strokeWidth={3} />
+                    <Tooltip
+                      formatter={(value) => [`$${value}`, "Total Sales"]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="#8884d8"
+                      strokeWidth={3}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -254,24 +490,42 @@ export function ReportsAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Sales Summary</CardTitle>
-              <CardDescription>Key performance indicators for the selected period</CardDescription>
+              <CardDescription>
+                Key performance indicators for the selected period
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">${salesData.reduce((sum, data) => sum + data.paintings, 0).toLocaleString()}</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    $
+                    {salesData
+                      .reduce((sum, data) => sum + data.paintings, 0)
+                      .toLocaleString()}
+                  </div>
                   <div className="text-sm text-gray-600">Paintings Revenue</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">${salesData.reduce((sum, data) => sum + data.paints, 0).toLocaleString()}</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    $
+                    {salesData
+                      .reduce((sum, data) => sum + data.paints, 0)
+                      .toLocaleString()}
+                  </div>
                   <div className="text-sm text-gray-600">Paints Revenue</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{Math.max(...salesData.map(d => d.total)).toLocaleString()}</div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {Math.max(
+                      ...salesData.map((d) => d.total)
+                    ).toLocaleString()}
+                  </div>
                   <div className="text-sm text-gray-600">Best Month</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{((totalRevenue / 12) / 1000).toFixed(1)}K</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {(totalRevenue / 12 / 1000).toFixed(1)}K
+                  </div>
                   <div className="text-sm text-gray-600">Avg Monthly</div>
                 </div>
               </div>
@@ -284,7 +538,9 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Top Products by Revenue</CardTitle>
-                <CardDescription>Best performing products in your catalog</CardDescription>
+                <CardDescription>
+                  Best performing products in your catalog
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -292,7 +548,7 @@ export function ReportsAnalytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis dataKey="name" type="category" width={120} />
-                    <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                    <Tooltip formatter={(value) => [`$${value}`, "Revenue"]} />
                     <Bar dataKey="revenue" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -302,29 +558,50 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Product Categories</CardTitle>
-                <CardDescription>Revenue distribution by category</CardDescription>
+                <CardDescription>
+                  Revenue distribution by category
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {['Paintings', 'Paints'].map((category) => {
-                    const categoryProducts = productPerformance.filter(p => p.category === category);
-                    const categoryRevenue = categoryProducts.reduce((sum, p) => sum + p.revenue, 0);
-                    const totalProductRevenue = productPerformance.reduce((sum, p) => sum + p.revenue, 0);
-                    const percentage = (categoryRevenue / totalProductRevenue) * 100;
-                    
+                  {["Paintings", "Paints"].map((category) => {
+                    const categoryProducts = productPerformance.filter(
+                      (p) => p.category === category
+                    );
+                    const categoryRevenue = categoryProducts.reduce(
+                      (sum, p) => sum + p.revenue,
+                      0
+                    );
+                    const totalProductRevenue = productPerformance.reduce(
+                      (sum, p) => sum + p.revenue,
+                      0
+                    );
+                    const percentage =
+                      (categoryRevenue / totalProductRevenue) * 100;
+
                     return (
                       <div key={category} className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">{category}</span>
-                          <span className="text-sm text-gray-600">${categoryRevenue.toLocaleString()}</span>
+                          <span className="text-sm font-medium">
+                            {category}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            ${categoryRevenue.toLocaleString()}
+                          </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${category === 'Paintings' ? 'bg-blue-600' : 'bg-green-600'}`}
+                          <div
+                            className={`h-2 rounded-full ${
+                              category === "Paintings"
+                                ? "bg-blue-600"
+                                : "bg-green-600"
+                            }`}
                             style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
-                        <div className="text-xs text-gray-500">{percentage.toFixed(1)}% of total revenue</div>
+                        <div className="text-xs text-gray-500">
+                          {percentage.toFixed(1)}% of total revenue
+                        </div>
                       </div>
                     );
                   })}
@@ -337,7 +614,9 @@ export function ReportsAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Detailed Product Performance</CardTitle>
-              <CardDescription>Complete breakdown of all products</CardDescription>
+              <CardDescription>
+                Complete breakdown of all products
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -359,8 +638,12 @@ export function ReportsAnalytics() {
                           <Badge variant="outline">{product.category}</Badge>
                         </td>
                         <td className="p-2 text-center">{product.sold}</td>
-                        <td className="p-2 text-right font-semibold">${product.revenue.toLocaleString()}</td>
-                        <td className="p-2 text-right">${(product.revenue / product.sold).toFixed(0)}</td>
+                        <td className="p-2 text-right font-semibold">
+                          ${product.revenue.toLocaleString()}
+                        </td>
+                        <td className="p-2 text-right">
+                          ${(product.revenue / product.sold).toFixed(0)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -375,7 +658,9 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Client Segments</CardTitle>
-                <CardDescription>Revenue distribution by client type</CardDescription>
+                <CardDescription>
+                  Revenue distribution by client type
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -387,7 +672,7 @@ export function ReportsAnalytics() {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({name, value}) => `${name} ${value}%`}
+                      label={({ name, value }) => `${name} ${value}%`}
                     >
                       {clientSegments.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -402,14 +687,22 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Client Growth</CardTitle>
-                <CardDescription>New clients acquired over time</CardDescription>
+                <CardDescription>
+                  New clients acquired over time
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {clientSegments.map((segment, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
                       <div className="flex items-center space-x-3">
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: segment.color }}></div>
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: segment.color }}
+                        ></div>
                         <span className="font-medium">{segment.name}</span>
                       </div>
                       <div className="text-right">
@@ -427,24 +720,30 @@ export function ReportsAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Client Insights</CardTitle>
-              <CardDescription>Key metrics about your customer base</CardDescription>
+              <CardDescription>
+                Key metrics about your customer base
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">89</div>
+                  <div className="text-2xl font-bold text-blue-600">{clientSegments.reduce((sum, s) => sum + s.value, 0)}</div>
                   <div className="text-sm text-gray-600">Total Clients</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">12</div>
+                  <div className="text-2xl font-bold text-green-600">-</div>
                   <div className="text-sm text-gray-600">New This Month</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">$2,847</div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {totalRevenue > 0 && clientSegments.reduce((sum, s) => sum + s.value, 0) > 0 
+                      ? formatCurrency(totalRevenue / clientSegments.reduce((sum, s) => sum + s.value, 0))
+                      : '-'}
+                  </div>
                   <div className="text-sm text-gray-600">Avg Client Value</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">68%</div>
+                  <div className="text-2xl font-bold text-orange-600">-</div>
                   <div className="text-sm text-gray-600">Repeat Customers</div>
                 </div>
               </div>
@@ -457,22 +756,41 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Low Stock Alerts</CardTitle>
-                <CardDescription>Items requiring immediate attention</CardDescription>
+                <CardDescription>
+                  Items requiring immediate attention
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {inventoryAlerts.map((alert) => (
-                    <div key={alert.id} className={`p-3 rounded-lg border ${alert.currentStock <= alert.minStock ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                    <div
+                      key={alert.id}
+                      className={`p-3 rounded-lg border ${
+                        alert.currentStock <= alert.minStock
+                          ? "bg-red-50 border-red-200"
+                          : "bg-yellow-50 border-yellow-200"
+                      }`}
+                    >
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="font-medium">{alert.productName}</div>
-                          <div className="text-sm text-gray-600">{alert.category}</div>
+                          <div className="text-sm text-gray-600">
+                            {alert.category}
+                          </div>
                         </div>
                         <div className="text-right">
-                          <div className={`font-semibold ${alert.currentStock <= alert.minStock ? 'text-red-600' : 'text-orange-600'}`}>
+                          <div
+                            className={`font-semibold ${
+                              alert.currentStock <= alert.minStock
+                                ? "text-red-600"
+                                : "text-orange-600"
+                            }`}
+                          >
                             {alert.currentStock} / {alert.minStock}
                           </div>
-                          <div className="text-xs text-gray-500">{alert.daysOfStock} days left</div>
+                          <div className="text-xs text-gray-500">
+                            {alert.daysOfStock} days left
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -484,43 +802,15 @@ export function ReportsAnalytics() {
             <Card>
               <CardHeader>
                 <CardTitle>Inventory Value</CardTitle>
-                <CardDescription>Current stock valuation by category</CardDescription>
+                <CardDescription>
+                  Current stock valuation by category
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Paintings</span>
-                      <span className="text-sm text-gray-600">$32,450</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="h-2 rounded-full bg-blue-600" style={{ width: '65%' }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Paint Supplies</span>
-                      <span className="text-sm text-gray-600">$12,800</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="h-2 rounded-full bg-green-600" style={{ width: '25%' }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Canvases & Frames</span>
-                      <span className="text-sm text-gray-600">$4,920</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="h-2 rounded-full bg-purple-600" style={{ width: '10%' }}></div>
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between items-center font-semibold">
-                      <span>Total Inventory Value</span>
-                      <span className="text-green-600">$50,170</span>
-                    </div>
-                  </div>
+                <div className="text-center py-8 text-gray-500">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">Inventory valuation coming soon</p>
+                  <p className="text-xs mt-1">Add product costs to calculate inventory value</p>
                 </div>
               </CardContent>
             </Card>
@@ -535,20 +825,20 @@ export function ReportsAnalytics() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">156</div>
-                  <div className="text-sm text-gray-600">Total SKUs</div>
+                  <div className="text-2xl font-bold text-blue-600">{productPerformance.length}</div>
+                  <div className="text-sm text-gray-600">Total Products</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">4.2</div>
+                  <div className="text-2xl font-bold text-green-600">-</div>
                   <div className="text-sm text-gray-600">Avg Turnover Rate</div>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">23</div>
+                  <div className="text-2xl font-bold text-yellow-600">-</div>
                   <div className="text-sm text-gray-600">Slow Moving</div>
                 </div>
                 <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">8</div>
-                  <div className="text-sm text-gray-600">Out of Stock</div>
+                  <div className="text-2xl font-bold text-red-600">{inventoryAlerts.length}</div>
+                  <div className="text-sm text-gray-600">Low Stock</div>
                 </div>
               </div>
             </CardContent>

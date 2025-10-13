@@ -82,6 +82,7 @@ export function ProjectsManager() {
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -217,22 +218,31 @@ export function ProjectsManager() {
         created_at: new Date().toISOString(),
       };
 
+      console.log("Inserting project data:", projectData);
+
       const { data, error } = await supabase
         .from("projects")
         .insert([projectData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error details:", error);
+        throw error;
+      }
 
       toast.success("Project created successfully", { id: toastId });
       setIsAddDialogOpen(false);
       setNewProject({});
       setSelectedFiles([]);
       loadData();
-    } catch (error) {
-      console.error("Error creating project:", error);
-      toast.error("Failed to create project", { id: toastId });
+    } catch (error: any) {
+      console.error("Full error creating project:", error);
+      const errorMsg = error?.message || error?.hint || "Unknown error";
+      toast.error(`Database error: ${errorMsg}`, {
+        id: toastId,
+        duration: 6000,
+      });
     } finally {
       setSaving(false);
     }
@@ -654,6 +664,23 @@ export function ProjectsManager() {
                 </p>
               )}
 
+              {/* Media indicators */}
+              {((project.images?.length ?? 0) > 0 || project.videoLink) && (
+                <div className="flex gap-2 text-xs">
+                  {project.images && project.images.length > 0 && (
+                    <Badge variant="outline" className="text-blue-600">
+                      📷 {project.images.length}{" "}
+                      {project.images.length === 1 ? "image" : "images"}
+                    </Badge>
+                  )}
+                  {project.videoLink && (
+                    <Badge variant="outline" className="text-purple-600">
+                      🎥 Video
+                    </Badge>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
@@ -661,12 +688,22 @@ export function ProjectsManager() {
                   className="flex-1"
                   onClick={() => {
                     setSelectedProject(project);
+                    setIsViewDialogOpen(true);
+                  }}
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedProject(project);
                     setNewProject(project);
                     setIsEditDialogOpen(true);
                   }}
                 >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
+                  <Edit className="h-3 w-3" />
                 </Button>
                 <Button
                   variant="outline"
@@ -692,6 +729,219 @@ export function ProjectsManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* View Project Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedProject && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center space-x-3">
+                  <Briefcase className="h-5 w-5" />
+                  <div>
+                    <div>{selectedProject.name}</div>
+                    <div className="text-sm text-gray-500 font-normal">
+                      {selectedProject.projectNumber}
+                    </div>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Status and Basic Info */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium mb-3">Project Status</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(selectedProject.status)}
+                        {getStatusBadge(selectedProject.status)}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Type:{" "}
+                        <span className="font-medium">
+                          {selectedProject.projectType}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-3">Client Information</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-sm">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">
+                          {selectedProject.clientName}
+                        </span>
+                      </div>
+                      {selectedProject.location && (
+                        <div className="flex items-center space-x-2 text-sm">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <span className="text-gray-600">
+                            {selectedProject.location}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                {(selectedProject.startDate || selectedProject.endDate) && (
+                  <div>
+                    <h4 className="font-medium mb-3">Timeline</h4>
+                    <div className="flex items-center space-x-4 text-sm">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <div>
+                        {selectedProject.startDate && (
+                          <span>
+                            Start:{" "}
+                            {new Date(
+                              selectedProject.startDate
+                            ).toLocaleDateString()}
+                          </span>
+                        )}
+                        {selectedProject.endDate && (
+                          <span className="ml-4">
+                            End:{" "}
+                            {new Date(
+                              selectedProject.endDate
+                            ).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Budget */}
+                {(selectedProject.estimatedBudget ||
+                  selectedProject.actualCost) && (
+                  <div>
+                    <h4 className="font-medium mb-3">Budget</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedProject.estimatedBudget && (
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <div className="text-xs text-gray-600 mb-1">
+                            Estimated Budget
+                          </div>
+                          <div className="text-lg font-bold text-blue-600">
+                            {formatCurrency(selectedProject.estimatedBudget)}
+                          </div>
+                        </div>
+                      )}
+                      {selectedProject.actualCost &&
+                        selectedProject.actualCost > 0 && (
+                          <div className="bg-green-50 p-3 rounded-lg">
+                            <div className="text-xs text-gray-600 mb-1">
+                              Actual Cost
+                            </div>
+                            <div className="text-lg font-bold text-green-600">
+                              {formatCurrency(selectedProject.actualCost)}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selectedProject.description && (
+                  <div>
+                    <h4 className="font-medium mb-3">Description</h4>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                      {selectedProject.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Images */}
+                {selectedProject.images &&
+                  selectedProject.images.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-3">
+                        Project Images ({selectedProject.images.length})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {selectedProject.images.map((imageUrl, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={imageUrl}
+                              alt={`Project image ${index + 1}`}
+                              className="w-full h-48 object-cover rounded-lg border shadow-sm"
+                            />
+                            <a
+                              href={imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center"
+                            >
+                              <Eye className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Video Link */}
+                {selectedProject.videoLink && (
+                  <div>
+                    <h4 className="font-medium mb-3">Video</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <a
+                        href={selectedProject.videoLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-700 underline flex items-center space-x-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span>View Video</span>
+                      </a>
+                      <p className="text-xs text-gray-500 mt-2 break-all">
+                        {selectedProject.videoLink}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedProject.notes && (
+                  <div>
+                    <h4 className="font-medium mb-3">Notes</h4>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
+                      {selectedProject.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Created Date */}
+                <div className="text-xs text-gray-500 border-t pt-4">
+                  Created:{" "}
+                  {new Date(selectedProject.createdAt).toLocaleString()}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsViewDialogOpen(false);
+                    setNewProject(selectedProject);
+                    setIsEditDialogOpen(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Project
+                </Button>
+                <Button onClick={() => setIsViewDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

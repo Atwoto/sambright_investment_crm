@@ -475,9 +475,10 @@ export function OrdersManager() {
         .eq("id", editOrder.id);
       if (error) throw error;
       toast.success("Order updated", { id });
-    } catch (e) {
-      toast.info("Updated locally (offline or server error)", { id });
-      console.error(e);
+    } catch (e: any) {
+      const errorMsg = e?.message || "Unknown error";
+      toast.error(`Database error: ${errorMsg}`, { id, duration: 5000 });
+      console.error("Full error:", e);
     }
     setSavingEdit(false);
     setIsEditDialogOpen(false);
@@ -497,11 +498,10 @@ export function OrdersManager() {
         .eq("id", orderId);
       if (error) throw error;
       toast.success("Order deleted", { id });
-    } catch (e) {
-      // Revert optimistic delete on error
-      // Note: In a real implementation, you'd want to re-fetch the orders from the database
-      toast.info("Deleted locally (offline or server error)", { id });
-      console.error("Error deleting order:", e);
+    } catch (e: any) {
+      const errorMsg = e?.message || "Unknown error";
+      toast.error(`Database error: ${errorMsg}`, { id, duration: 5000 });
+      console.error("Full error:", e);
     }
     setDeletingId(null);
   };

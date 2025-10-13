@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import {
@@ -33,8 +34,10 @@ import { OrdersManager } from "./components/OrdersManager";
 import { ProjectsManager } from "./components/ProjectsManager";
 import { InventoryTransactions } from "./components/InventoryTransactions";
 import { ReportsAnalytics } from "./components/ReportsAnalytics";
+import { AIColorAdvisor } from "./components/AIColorAdvisor";
 import { Login } from "./components/Login";
 import { CustomerPortal } from "./components/CustomerPortal";
+import { supabase } from "./utils/supabase/client";
 import { projectId, publicAnonKey } from "./utils/supabase/info";
 import { useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
@@ -47,12 +50,46 @@ export default function App() {
   const [pendingOrders, setPendingOrders] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Mock data for demo - in real implementation, this would come from the database
+  // Fetch dynamic data for low stock alerts and pending orders
   useEffect(() => {
-    // Simulate loading dashboard metrics
-    setLowStockAlerts(3);
-    setPendingOrders(8);
-  }, []);
+    const fetchHeaderMetrics = async () => {
+      try {
+        // Fetch low stock items (products with stock_level < min_stock_level)
+        const { data: lowStockItems, error: lowStockError } = await supabase
+          .from("products")
+          .select("id")
+          .lt("stock_level", "min_stock_level");
+
+        if (lowStockError) {
+          console.error("Error fetching low stock items:", lowStockError);
+        } else {
+          setLowStockAlerts(lowStockItems?.length || 0);
+        }
+
+        // Fetch pending orders (orders with payment_status = 'pending' or status in 'draft', 'sent')
+        const { data: pendingOrdersData, error: pendingOrdersError } =
+          await supabase
+            .from("orders")
+            .select("id")
+            .or("payment_status.eq.pending,status.eq.draft,status.eq.sent");
+
+        if (pendingOrdersError) {
+          console.error("Error fetching pending orders:", pendingOrdersError);
+        } else {
+          setPendingOrders(pendingOrdersData?.length || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching header metrics:", error);
+      }
+    };
+
+    fetchHeaderMetrics();
+
+    // Refresh metrics when tab changes (to reflect any updates made in other tabs)
+    const interval = setInterval(fetchHeaderMetrics, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: TrendingUp },
@@ -62,6 +99,7 @@ export default function App() {
     { id: "suppliers", label: "Suppliers", icon: Brush },
     { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "inventory", label: "Inventory", icon: Package },
+    { id: "ai-advisor", label: "AI Color Advisor", icon: Sparkles },
     { id: "reports", label: "Reports", icon: TrendingUp },
   ];
 
@@ -373,6 +411,13 @@ export default function App() {
             className="space-y-8 animate-in fade-in-50 duration-200"
           >
             <InventoryTransactions />
+          </TabsContent>
+
+          <TabsContent
+            value="ai-advisor"
+            className="space-y-8 animate-in fade-in-50 duration-200"
+          >
+            <AIColorAdvisor />
           </TabsContent>
 
           <TabsContent
