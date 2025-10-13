@@ -242,11 +242,13 @@ export function ReportsAnalytics() {
       setClientSegments(segments);
 
       // Fetch low stock items
-      const { data: lowStockData, error: lowStockError } = await supabase
-        .from("products")
-        .select("*")
-        .lt("stock_level", "min_stock_level")
-        .limit(10);
+      const { data: allProductsForLowStock, error: lowStockError } =
+        await supabase.from("products").select("*");
+
+      const lowStockData =
+        allProductsForLowStock
+          ?.filter((product) => product.stock_level < product.min_stock_level)
+          .slice(0, 10) || [];
 
       if (lowStockError) throw lowStockError;
 
@@ -395,9 +397,7 @@ export function ReportsAnalytics() {
             <div className="text-2xl font-bold">
               ${averageOrderValue.toFixed(0)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Average order value
-            </p>
+            <p className="text-xs text-muted-foreground">Average order value</p>
           </CardContent>
         </Card>
 
@@ -727,7 +727,9 @@ export function ReportsAnalytics() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{clientSegments.reduce((sum, s) => sum + s.value, 0)}</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {clientSegments.reduce((sum, s) => sum + s.value, 0)}
+                  </div>
                   <div className="text-sm text-gray-600">Total Clients</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
@@ -736,9 +738,13 @@ export function ReportsAnalytics() {
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">
-                    {totalRevenue > 0 && clientSegments.reduce((sum, s) => sum + s.value, 0) > 0 
-                      ? formatCurrency(totalRevenue / clientSegments.reduce((sum, s) => sum + s.value, 0))
-                      : '-'}
+                    {totalRevenue > 0 &&
+                    clientSegments.reduce((sum, s) => sum + s.value, 0) > 0
+                      ? formatCurrency(
+                          totalRevenue /
+                            clientSegments.reduce((sum, s) => sum + s.value, 0)
+                        )
+                      : "-"}
                   </div>
                   <div className="text-sm text-gray-600">Avg Client Value</div>
                 </div>
@@ -810,7 +816,9 @@ export function ReportsAnalytics() {
                 <div className="text-center py-8 text-gray-500">
                   <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                   <p className="text-sm">Inventory valuation coming soon</p>
-                  <p className="text-xs mt-1">Add product costs to calculate inventory value</p>
+                  <p className="text-xs mt-1">
+                    Add product costs to calculate inventory value
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -825,7 +833,9 @@ export function ReportsAnalytics() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{productPerformance.length}</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {productPerformance.length}
+                  </div>
                   <div className="text-sm text-gray-600">Total Products</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
@@ -837,7 +847,9 @@ export function ReportsAnalytics() {
                   <div className="text-sm text-gray-600">Slow Moving</div>
                 </div>
                 <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{inventoryAlerts.length}</div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {inventoryAlerts.length}
+                  </div>
                   <div className="text-sm text-gray-600">Low Stock</div>
                 </div>
               </div>

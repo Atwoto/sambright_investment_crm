@@ -96,11 +96,14 @@ export function DashboardOverview() {
       if (paintsError) throw paintsError;
 
       // Fetch low stock items (products with stock_level < min_stock_level)
-      const { data: lowStockItems, error: lowStockError } = await supabase
+      const { data: allProducts, error: lowStockError } = await supabase
         .from("products")
-        .select("id")
-        .lt("stock_level", "min_stock_level")
-        .limit(10);
+        .select("id, stock_level, min_stock_level");
+
+      const lowStockItems =
+        allProducts
+          ?.filter((item) => item.stock_level < item.min_stock_level)
+          .slice(0, 10) || [];
 
       if (lowStockError) throw lowStockError;
 

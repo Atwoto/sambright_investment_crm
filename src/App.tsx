@@ -57,13 +57,17 @@ export default function App() {
         // Fetch low stock items (products with stock_level < min_stock_level)
         const { data: lowStockItems, error: lowStockError } = await supabase
           .from("products")
-          .select("id")
-          .lt("stock_level", "min_stock_level");
+          .select("id, stock_level, min_stock_level");
 
         if (lowStockError) {
           console.error("Error fetching low stock items:", lowStockError);
         } else {
-          setLowStockAlerts(lowStockItems?.length || 0);
+          // Filter items where stock_level < min_stock_level
+          const actualLowStockItems =
+            lowStockItems?.filter(
+              (item) => item.stock_level < item.min_stock_level
+            ) || [];
+          setLowStockAlerts(actualLowStockItems.length);
         }
 
         // Fetch pending orders (orders with payment_status = 'pending' or status in 'draft', 'sent')
