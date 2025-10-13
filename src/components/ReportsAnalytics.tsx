@@ -209,35 +209,41 @@ export function ReportsAnalytics() {
 
       if (clientsError) throw clientsError;
 
-      // Calculate client segments (simplified - you can enhance this based on your business logic)
+      // Calculate client segments based on actual client_type data
+      const clientTypeCount: { [key: string]: number } = {};
       const totalClients = clientsData?.length || 0;
-      const segments = [
-        {
-          name: "Galleries",
-          value: Math.round(totalClients * 0.35),
-          color: "#8884d8",
-        },
-        {
-          name: "Individual Collectors",
-          value: Math.round(totalClients * 0.25),
-          color: "#82ca9d",
-        },
-        {
-          name: "Interior Designers",
-          value: Math.round(totalClients * 0.2),
-          color: "#ffc658",
-        },
-        {
-          name: "Artists",
-          value: Math.round(totalClients * 0.15),
-          color: "#ff7300",
-        },
-        {
-          name: "Other",
-          value: Math.round(totalClients * 0.05),
-          color: "#00ff00",
-        },
+
+      // Count actual client types
+      clientsData?.forEach((client) => {
+        const type = client.client_type || "Other";
+        clientTypeCount[type] = (clientTypeCount[type] || 0) + 1;
+      });
+
+      // Create segments from actual data
+      const colors = [
+        "#8884d8",
+        "#82ca9d",
+        "#ffc658",
+        "#ff7300",
+        "#00ff00",
+        "#8dd1e1",
       ];
+      const segments = Object.entries(clientTypeCount).map(
+        ([type, count], index) => ({
+          name: type.charAt(0).toUpperCase() + type.slice(1),
+          value: count,
+          color: colors[index % colors.length],
+        })
+      );
+
+      // Add "No Data" segment if no client types are set
+      if (segments.length === 0) {
+        segments.push({
+          name: "No Client Type Data",
+          value: totalClients,
+          color: "#cccccc",
+        });
+      }
 
       setClientSegments(segments);
 
@@ -281,12 +287,14 @@ export function ReportsAnalytics() {
   const totalPaintingsSold = productPerformance
     .filter((p) => p.category === "Paintings")
     .reduce((sum, p) => sum + p.sold, 0);
+  // Calculate average order value properly (revenue / number of orders)
+  const totalOrdersCount = salesData.reduce((sum, data) => {
+    // This is a simplified count - ideally we'd track actual order count per month
+    return sum + (data.total > 0 ? 1 : 0);
+  }, 0);
+
   const averageOrderValue =
-    totalRevenue /
-    (totalPaintingsSold +
-      productPerformance
-        .filter((p) => p.category === "Paints")
-        .reduce((sum, p) => sum + p.sold, 0));
+    totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
 
   const topProducts = [...productPerformance]
     .sort((a, b) => b.revenue - a.revenue)
@@ -359,11 +367,11 @@ export function ReportsAnalytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalRevenue.toLocaleString()}
+              {formatCurrency(totalRevenue)}
             </div>
             <p className="text-xs text-muted-foreground">
               Total revenue from all orders
@@ -395,7 +403,7 @@ export function ReportsAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${averageOrderValue.toFixed(0)}
+              {formatCurrency(averageOrderValue)}
             </div>
             <p className="text-xs text-muted-foreground">Average order value</p>
           </CardContent>
