@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Palette,
   X,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,7 +39,42 @@ interface ColorRecommendation {
 export function AIColorAdvisor() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<ColorRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<ColorRecommendation[]>(
+    []
+  );
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Timer utility functions
+  const startTimer = () => {
+    setElapsedTime(0);
+    const interval = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
+    setTimerInterval(interval);
+  };
+
+  const stopTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Cleanup timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [timerInterval]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -47,7 +83,7 @@ export function AIColorAdvisor() {
     const newImages: UploadedImage[] = [];
     Array.from(files).forEach((file) => {
       if (file.type.startsWith("image/")) {
-        const id = Math.random().toString(36).substr(2, 9);
+        const id = Math.random().toString(36).substring(2, 11);
         const preview = URL.createObjectURL(file);
         newImages.push({ id, file, preview });
       }
@@ -82,6 +118,7 @@ export function AIColorAdvisor() {
 
     setIsLoading(true);
     setRecommendations([]);
+    startTimer();
 
     try {
       const imagePromises = uploadedImages.map((img) => {
@@ -96,7 +133,8 @@ export function AIColorAdvisor() {
       const base64Images = await Promise.all(imagePromises);
 
       // --- MODIFICATION #1: Use the PRODUCTION Webhook URL ---
-      const webhookUrl = "https://n8n-n2hx.onrender.com/webhook/ai-color-advisor";
+      const webhookUrl =
+        "https://n8n-n2hx.onrender.com/webhook/ai-color-advisor";
 
       const response = await fetch(webhookUrl, {
         method: "POST",
@@ -114,16 +152,20 @@ export function AIColorAdvisor() {
       const result = await response.json();
 
       if (!result || !Array.isArray(result) || result.length === 0) {
-        throw new Error("The n8n workflow returned no valid recommendations, or the format was incorrect.");
+        throw new Error(
+          "The n8n workflow returned no valid recommendations, or the format was incorrect."
+        );
       }
 
       setRecommendations(result);
-      toast.success("Successfully generated AI recommendations and 3D previews!");
-
+      toast.success(
+        "Successfully generated AI recommendations and 3D previews!"
+      );
     } catch (error: any) {
       console.error("Error getting AI recommendations:", error);
       toast.error(error.message || "An unknown error occurred.");
     } finally {
+      stopTimer();
       setIsLoading(false);
     }
   };
@@ -132,6 +174,8 @@ export function AIColorAdvisor() {
     uploadedImages.forEach((img) => URL.revokeObjectURL(img.preview));
     setUploadedImages([]);
     setRecommendations([]);
+    stopTimer();
+    setElapsedTime(0);
     setIsLoading(false);
   };
 
@@ -163,7 +207,8 @@ export function AIColorAdvisor() {
               <span>Upload House Images</span>
             </CardTitle>
             <CardDescription>
-              Add multiple images of the house from different angles for better results.
+              Add multiple images of the house from different angles for better
+              results.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -248,6 +293,39 @@ export function AIColorAdvisor() {
                 </>
               )}
             </Button>
+
+            {isLoading && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-center space-x-3">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-blue-900">
+                      Processing your images...
+                    </p>
+                    <p className="text-lg font-mono font-bold text-blue-700 mt-1">
+                      {formatTime(elapsedTime)}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      This usually takes 3-4 minutes. Please don't close this page.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-3">
+                  <div className="bg-blue-200 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ 
+                        width: `${Math.min((elapsedTime / 240) * 100, 100)}%` 
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-blue-600 text-center mt-1">
+                    Estimated completion: {Math.max(0, 240 - elapsedTime)} seconds remaining
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -264,7 +342,8 @@ export function AIColorAdvisor() {
                 <div>
                   <h4 className="font-medium text-gray-900">Upload Images</h4>
                   <p className="text-sm text-gray-600">
-                    Add photos of the house from different angles for the best results.
+                    Add photos of the house from different angles for the best
+                    results.
                   </p>
                 </div>
               </div>
@@ -276,7 +355,9 @@ export function AIColorAdvisor() {
                 <div>
                   <h4 className="font-medium text-gray-900">Get Previews</h4>
                   <p className="text-sm text-gray-600">
-                    Click the button to send your images to our AI workflow, which will generate color palettes and realistic 3D previews.
+                    Click the button to send your images to our AI workflow,
+                    which will generate color palettes and realistic 3D
+                    previews.
                   </p>
                 </div>
               </div>
@@ -288,7 +369,8 @@ export function AIColorAdvisor() {
                 <div>
                   <h4 className="font-medium text-gray-900">Review & Choose</h4>
                   <p className="text-sm text-gray-600">
-                    Review the 3 different AI-generated options and choose the best fit for your project.
+                    Review the 3 different AI-generated options and choose the
+                    best fit for your project.
                   </p>
                 </div>
               </div>
