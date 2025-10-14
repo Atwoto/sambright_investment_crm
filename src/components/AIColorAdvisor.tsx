@@ -103,12 +103,7 @@ export function AIColorAdvisor() {
         headers: {
           "Content-Type": "application/json",
         },
-        // --- MODIFICATION #2: Wrap the data in a "body" object to match n8n ---
-        body: JSON.stringify({
-          body: {
-            base64Images,
-          },
-        }),
+        body: JSON.stringify({ base64Images }),
       });
 
       if (!response.ok) {
@@ -118,12 +113,13 @@ export function AIColorAdvisor() {
 
       const result = await response.json();
 
-      // --- MODIFICATION #3: Read the results from the "recommendations" key ---
-      if (!result || !Array.isArray(result) || result.length === 0) {
-        throw new Error("The n8n workflow returned no recommendations.");
+      const recommendations = result.recommendations;
+
+      if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
+        throw new Error("The n8n workflow returned no valid recommendations.");
       }
 
-      setRecommendations(result);
+      setRecommendations(recommendations);
       toast.success("Successfully generated AI recommendations and 3D previews!");
 
     } catch (error: any) {
