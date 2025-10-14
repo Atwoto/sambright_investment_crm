@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../utils/supabase/client";
 import { formatCurrency } from "../utils/currency";
+import { useTheme } from "../contexts/ThemeContext";
 import {
   Card,
   CardContent,
@@ -78,6 +79,7 @@ interface InventoryAlert {
 }
 
 export function ReportsAnalytics() {
+  const { theme } = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState("12months");
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [productPerformance, setProductPerformance] = useState<
@@ -308,18 +310,18 @@ export function ReportsAnalytics() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">
+            <h2 className="text-2xl font-semibold text-foreground">
               Reports & Analytics
             </h2>
-            <p className="text-gray-600">Loading data...</p>
+            <p className="text-muted-foreground">Loading data...</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader className="space-y-0 pb-2">
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-8 bg-gray-200 rounded w-16 mt-2"></div>
+                <div className="h-4 bg-muted rounded w-20"></div>
+                <div className="h-8 bg-muted rounded w-16 mt-2"></div>
               </CardHeader>
             </Card>
           ))}
@@ -332,10 +334,10 @@ export function ReportsAnalytics() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">
+          <h2 className="text-2xl font-semibold text-foreground">
             Reports & Analytics
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Business insights and performance metrics
           </p>
         </div>
@@ -445,10 +447,35 @@ export function ReportsAnalytics() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, ""]} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={theme === "dark" ? "#374151" : "#e5e7eb"}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
+                      axisLine={{
+                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
+                      }}
+                    />
+                    <YAxis
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
+                      axisLine={{
+                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
+                      }}
+                    />
+                    <Tooltip
+                      formatter={(value) => [`$${value}`, ""]}
+                      contentStyle={{
+                        backgroundColor:
+                          theme === "dark" ? "#1f2937" : "#ffffff",
+                        border: `1px solid ${
+                          theme === "dark" ? "#374151" : "#e5e7eb"
+                        }`,
+                        borderRadius: "6px",
+                        color: theme === "dark" ? "#f9fafb" : "#111827",
+                      }}
+                    />
                     <Area
                       type="monotone"
                       dataKey="paintings"
@@ -476,11 +503,34 @@ export function ReportsAnalytics() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={theme === "dark" ? "#374151" : "#e5e7eb"}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
+                      axisLine={{
+                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
+                      }}
+                    />
+                    <YAxis
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
+                      axisLine={{
+                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
+                      }}
+                    />
                     <Tooltip
                       formatter={(value) => [`$${value}`, "Total Sales"]}
+                      contentStyle={{
+                        backgroundColor:
+                          theme === "dark" ? "#1f2937" : "#ffffff",
+                        border: `1px solid ${
+                          theme === "dark" ? "#374151" : "#e5e7eb"
+                        }`,
+                        borderRadius: "6px",
+                        color: theme === "dark" ? "#f9fafb" : "#111827",
+                      }}
                     />
                     <Line
                       type="monotone"
@@ -511,7 +561,9 @@ export function ReportsAnalytics() {
                       .reduce((sum, data) => sum + data.paintings, 0)
                       .toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-600">Paintings Revenue</div>
+                  <div className="text-sm text-muted-foreground">
+                    Paintings Revenue
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
@@ -520,7 +572,9 @@ export function ReportsAnalytics() {
                       .reduce((sum, data) => sum + data.paints, 0)
                       .toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-600">Paints Revenue</div>
+                  <div className="text-sm text-muted-foreground">
+                    Paints Revenue
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">
@@ -528,13 +582,17 @@ export function ReportsAnalytics() {
                       ...salesData.map((d) => d.total)
                     ).toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-600">Best Month</div>
+                  <div className="text-sm text-muted-foreground">
+                    Best Month
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">
                     {(totalRevenue / 12 / 1000).toFixed(1)}K
                   </div>
-                  <div className="text-sm text-gray-600">Avg Monthly</div>
+                  <div className="text-sm text-muted-foreground">
+                    Avg Monthly
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -553,10 +611,38 @@ export function ReportsAnalytics() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={topProducts} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={120} />
-                    <Tooltip formatter={(value) => [`$${value}`, "Revenue"]} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={theme === "dark" ? "#374151" : "#e5e7eb"}
+                    />
+                    <XAxis
+                      type="number"
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
+                      axisLine={{
+                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
+                      }}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={120}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
+                      axisLine={{
+                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
+                      }}
+                    />
+                    <Tooltip
+                      formatter={(value) => [`$${value}`, "Revenue"]}
+                      contentStyle={{
+                        backgroundColor:
+                          theme === "dark" ? "#1f2937" : "#ffffff",
+                        border: `1px solid ${
+                          theme === "dark" ? "#374151" : "#e5e7eb"
+                        }`,
+                        borderRadius: "6px",
+                        color: theme === "dark" ? "#f9fafb" : "#111827",
+                      }}
+                    />
                     <Bar dataKey="revenue" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -593,11 +679,11 @@ export function ReportsAnalytics() {
                           <span className="text-sm font-medium">
                             {category}
                           </span>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-muted-foreground">
                             ${categoryRevenue.toLocaleString()}
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-muted rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               category === "Paintings"
@@ -607,7 +693,7 @@ export function ReportsAnalytics() {
                             style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {percentage.toFixed(1)}% of total revenue
                         </div>
                       </div>
@@ -640,7 +726,7 @@ export function ReportsAnalytics() {
                   </thead>
                   <tbody>
                     {productPerformance.map((product, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50">
+                      <tr key={index} className="border-b hover:bg-muted/50">
                         <td className="p-2 font-medium">{product.name}</td>
                         <td className="p-2">
                           <Badge variant="outline">{product.category}</Badge>
@@ -704,7 +790,7 @@ export function ReportsAnalytics() {
                   {clientSegments.map((segment, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
                     >
                       <div className="flex items-center space-x-3">
                         <div
@@ -715,7 +801,9 @@ export function ReportsAnalytics() {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold">{segment.value}%</div>
-                        <div className="text-sm text-gray-500">of revenue</div>
+                        <div className="text-sm text-muted-foreground">
+                          of revenue
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -738,11 +826,15 @@ export function ReportsAnalytics() {
                   <div className="text-2xl font-bold text-blue-600">
                     {clientSegments.reduce((sum, s) => sum + s.value, 0)}
                   </div>
-                  <div className="text-sm text-gray-600">Total Clients</div>
+                  <div className="text-sm text-muted-foreground">
+                    Total Clients
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">-</div>
-                  <div className="text-sm text-gray-600">New This Month</div>
+                  <div className="text-sm text-muted-foreground">
+                    New This Month
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">
@@ -754,11 +846,15 @@ export function ReportsAnalytics() {
                         )
                       : "-"}
                   </div>
-                  <div className="text-sm text-gray-600">Avg Client Value</div>
+                  <div className="text-sm text-muted-foreground">
+                    Avg Client Value
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">-</div>
-                  <div className="text-sm text-gray-600">Repeat Customers</div>
+                  <div className="text-sm text-muted-foreground">
+                    Repeat Customers
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -788,7 +884,7 @@ export function ReportsAnalytics() {
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="font-medium">{alert.productName}</div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-muted-foreground">
                             {alert.category}
                           </div>
                         </div>
@@ -802,7 +898,7 @@ export function ReportsAnalytics() {
                           >
                             {alert.currentStock} / {alert.minStock}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {alert.daysOfStock} days left
                           </div>
                         </div>
@@ -821,8 +917,8 @@ export function ReportsAnalytics() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-sm">Inventory valuation coming soon</p>
                   <p className="text-xs mt-1">
                     Add product costs to calculate inventory value
@@ -844,21 +940,27 @@ export function ReportsAnalytics() {
                   <div className="text-2xl font-bold text-blue-600">
                     {productPerformance.length}
                   </div>
-                  <div className="text-sm text-gray-600">Total Products</div>
+                  <div className="text-sm text-muted-foreground">
+                    Total Products
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">-</div>
-                  <div className="text-sm text-gray-600">Avg Turnover Rate</div>
+                  <div className="text-sm text-muted-foreground">
+                    Avg Turnover Rate
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">-</div>
-                  <div className="text-sm text-gray-600">Slow Moving</div>
+                  <div className="text-sm text-muted-foreground">
+                    Slow Moving
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-red-50 rounded-lg">
                   <div className="text-2xl font-bold text-red-600">
                     {inventoryAlerts.length}
                   </div>
-                  <div className="text-sm text-gray-600">Low Stock</div>
+                  <div className="text-sm text-muted-foreground">Low Stock</div>
                 </div>
               </div>
             </CardContent>

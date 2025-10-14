@@ -159,10 +159,9 @@ export function ClientsManager() {
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.company &&
-        client.company.toLowerCase().includes(searchTerm.toLowerCase()));
+      (client.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (client.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (client.company?.toLowerCase() || "").includes(searchTerm.toLowerCase());
     const matchesType =
       selectedType === "all" || client.clientType === selectedType;
     return matchesSearch && matchesType;
@@ -378,13 +377,15 @@ export function ClientsManager() {
 
   const getClientTypeColor = (type: string) => {
     const colors = {
-      residential: "bg-blue-100 text-blue-800",
-      commercial: "bg-green-100 text-green-800",
-      industrial: "bg-purple-100 text-purple-800",
-      government: "bg-orange-100 text-orange-800",
-      gallery: "bg-pink-100 text-pink-800",
+      residential: "bg-blue-500/20 text-blue-600 dark:text-blue-400",
+      commercial: "bg-green-500/20 text-green-600 dark:text-green-400",
+      industrial: "bg-purple-500/20 text-purple-600 dark:text-purple-400",
+      government: "bg-orange-500/20 text-orange-600 dark:text-orange-400",
+      gallery: "bg-pink-500/20 text-pink-600 dark:text-pink-400",
     };
-    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    return (
+      colors[type as keyof typeof colors] || "bg-muted text-muted-foreground"
+    );
   };
 
   const getInitials = (name: string) => {
@@ -399,10 +400,10 @@ export function ClientsManager() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-foreground">
             Client Management
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Manage your customers and track their purchase history
           </p>
         </div>
@@ -695,19 +696,19 @@ export function ClientsManager() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border shadow-sm">
+      <Card className="p-6 backdrop-blur-sm border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search clients by name, company, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500"
+              className="pl-10 focus:border-blue-500"
             />
           </div>
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-full sm:w-48 bg-white/80 border-gray-200">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
@@ -727,7 +728,7 @@ export function ClientsManager() {
         {filteredClients.map((client) => (
           <Card
             key={client.id}
-            className="bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+            className="backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
           >
             <CardHeader className="pb-3">
               <div className="flex items-start space-x-3">
@@ -753,16 +754,16 @@ export function ClientsManager() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Mail className="h-3 w-3" />
                 <span className="truncate">{client.email}</span>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Phone className="h-3 w-3" />
                 <span>{client.phone}</span>
               </div>
               {client.address && (
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <MapPin className="h-3 w-3" />
                   <span className="truncate">{client.address}</span>
                 </div>
@@ -773,18 +774,20 @@ export function ClientsManager() {
                   <div className="text-lg font-semibold text-green-600">
                     {formatCurrency(client.totalSpent)}
                   </div>
-                  <div className="text-xs text-gray-500">Total Spent</div>
+                  <div className="text-xs text-muted-foreground">
+                    Total Spent
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-semibold">
                     {client.orderCount || 0}
                   </div>
-                  <div className="text-xs text-gray-500">Orders</div>
+                  <div className="text-xs text-muted-foreground">Orders</div>
                 </div>
               </div>
 
               {client.lastPurchase && (
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span>
                     Last purchase:{" "}
@@ -827,7 +830,7 @@ export function ClientsManager() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
                   onClick={() => handleDeleteClient(client.id)}
                 >
                   <Trash2 className="h-3 w-3" />
@@ -853,7 +856,7 @@ export function ClientsManager() {
                   <div>
                     <div>{selectedClient.name}</div>
                     {selectedClient.company && (
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted-foreground">
                         {selectedClient.company}
                       </div>
                     )}
@@ -867,16 +870,16 @@ export function ClientsManager() {
                   <h4 className="font-medium mb-3">Contact Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                       <span>{selectedClient.email}</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       <span>{selectedClient.phone}</span>
                     </div>
                     {selectedClient.address && (
                       <div className="col-span-2 flex items-start space-x-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <span>{selectedClient.address}</span>
                       </div>
                     )}
@@ -887,19 +890,23 @@ export function ClientsManager() {
                 <div>
                   <h4 className="font-medium mb-3">Statistics</h4>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center p-3 bg-muted rounded-lg">
                       <div className="text-xl font-semibold text-green-600">
                         ${selectedClient.totalSpent.toLocaleString()}
                       </div>
-                      <div className="text-sm text-gray-500">Total Spent</div>
+                      <div className="text-sm text-muted-foreground">
+                        Total Spent
+                      </div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center p-3 bg-muted rounded-lg">
                       <div className="text-xl font-semibold">
                         {selectedClient.purchaseHistory.length}
                       </div>
-                      <div className="text-sm text-gray-500">Total Orders</div>
+                      <div className="text-sm text-muted-foreground">
+                        Total Orders
+                      </div>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center p-3 bg-muted rounded-lg">
                       <div className="text-xl font-semibold">
                         {selectedClient.purchaseHistory.length > 0
                           ? `$${(
@@ -908,7 +915,9 @@ export function ClientsManager() {
                             ).toFixed(0)}`
                           : "$0"}
                       </div>
-                      <div className="text-sm text-gray-500">Avg Order</div>
+                      <div className="text-sm text-muted-foreground">
+                        Avg Order
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -924,7 +933,7 @@ export function ClientsManager() {
                       >
                         <div>
                           <div className="font-medium">{purchase.items}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {new Date(purchase.date).toLocaleDateString()}
                           </div>
                         </div>
@@ -940,7 +949,7 @@ export function ClientsManager() {
                 {selectedClient.notes && (
                   <div>
                     <h4 className="font-medium mb-3">Notes</h4>
-                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
                       {selectedClient.notes}
                     </p>
                   </div>

@@ -174,12 +174,20 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 ${
-        theme === "dark" ? "dark" : ""
+      className={`min-h-screen ${
+        theme === "dark"
+          ? "dark bg-gradient-to-br from-gray-900 to-gray-800"
+          : "bg-gradient-to-br from-slate-50 to-blue-50"
       }`}
     >
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-4 sm:px-6 py-4 sticky top-0 z-50">
+      <header
+        className={`backdrop-blur-md border-b px-4 sm:px-6 py-4 sticky top-0 z-50 ${
+          theme === "dark"
+            ? "bg-gray-800/80 border-gray-700/50"
+            : "bg-white/80 border-gray-200/50"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl shadow-lg">
@@ -189,7 +197,13 @@ export default function App() {
               <h1 className="text-xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Sambright Investment Ltd
               </h1>
-              <p className="text-sm text-gray-600">Painting Business CRM</p>
+              <p
+                className={`text-sm ${
+                  theme === "dark" ? "text-gray-300" : "text-gray-600"
+                }`}
+              >
+                Painting Business CRM
+              </p>
             </div>
           </div>
 
@@ -341,7 +355,11 @@ export default function App() {
         >
           {/* Desktop Navigation */}
           <div className="hidden sm:block overflow-x-auto">
-            <TabsList className="inline-flex bg-white/80 backdrop-blur-sm border shadow-sm">
+            <TabsList
+              className={`inline-flex backdrop-blur-sm border shadow-sm ${
+                theme === "dark" ? "bg-gray-800/80" : "bg-white/80"
+              }`}
+            >
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -360,9 +378,16 @@ export default function App() {
 
           {/* Mobile breadcrumb */}
           <div className="block sm:hidden">
-            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <div
+              className={`flex items-center space-x-2 text-sm mb-4 ${
+                theme === "dark" ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               <span>Current:</span>
-              <Badge variant="outline" className="bg-white">
+              <Badge
+                variant="outline"
+                className={theme === "dark" ? "bg-gray-800" : "bg-white"}
+              >
                 {navigationItems.find((item) => item.id === activeTab)?.label}
               </Badge>
             </div>

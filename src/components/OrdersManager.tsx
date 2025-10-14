@@ -187,9 +187,15 @@ export function OrdersManager() {
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.clientEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      (order.orderNumber?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (order.clientName?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (order.clientEmail?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      );
     const matchesStatus =
       selectedStatus === "all" || order.status === selectedStatus;
     const matchesTab = activeTab === "all" || order.type === activeTab;
@@ -205,7 +211,7 @@ export function OrdersManager() {
       cancelled: "destructive",
     } as const;
     const colors = {
-      draft: "text-gray-600",
+      draft: "text-muted-foreground",
       sent: "text-blue-600",
       accepted: "text-green-600",
       completed: "text-green-700",
@@ -259,7 +265,7 @@ export function OrdersManager() {
       case "sent":
         return <Clock className="h-4 w-4 text-orange-600" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />;
+        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -579,10 +585,10 @@ export function OrdersManager() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-foreground">
             Orders & Invoices
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Manage quotes, sales orders, and invoices
           </p>
         </div>
@@ -787,7 +793,7 @@ export function OrdersManager() {
                 </div>
                 {(newOrder.items as OrderItem[]).length > 0 && (
                   <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                    <div className="bg-gray-50 px-3 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-gray-600 sticky top-0">
+                    <div className="bg-muted px-3 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground sticky top-0">
                       <div className="col-span-4">Product</div>
                       <div className="col-span-2 text-center">Type</div>
                       <div className="col-span-2 text-center">Qty</div>
@@ -889,7 +895,7 @@ export function OrdersManager() {
               </div>
             </div>
 
-            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-white pt-4 border-t mt-2">
+            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background pt-4 border-t mt-2">
               <div className="flex gap-2 w-full justify-end">
                 <Button
                   variant="outline"
@@ -935,19 +941,19 @@ export function OrdersManager() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border shadow-sm">
+      <Card className="p-6 backdrop-blur-sm border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search orders by number, client name, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500"
+              className="pl-10 focus:border-blue-500"
             />
           </div>
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-full sm:w-48 bg-white/80 border-gray-200">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -967,7 +973,7 @@ export function OrdersManager() {
         onValueChange={setActiveTab}
         className="space-y-8"
       >
-        <TabsList className="bg-white/80 backdrop-blur-sm border shadow-sm">
+        <TabsList className="backdrop-blur-sm border shadow-sm">
           <TabsTrigger
             value="all"
             className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
@@ -1012,7 +1018,7 @@ export function OrdersManager() {
                 className={`${
                   isOverdue(order)
                     ? "border-red-200 bg-red-50"
-                    : "bg-white/80 backdrop-blur-sm"
+                    : "backdrop-blur-sm"
                 } hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
               >
                 <CardHeader className="pb-3">
@@ -1043,25 +1049,29 @@ export function OrdersManager() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <div className="text-sm text-gray-600">Subtotal</div>
+                      <div className="text-sm text-muted-foreground">
+                        Subtotal
+                      </div>
                       <div className="font-semibold">
                         {formatCurrency(order.subtotal)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-600">Tax</div>
+                      <div className="text-sm text-muted-foreground">Tax</div>
                       <div className="font-semibold">
                         {formatCurrency(order.tax)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-600">Total</div>
+                      <div className="text-sm text-muted-foreground">Total</div>
                       <div className="text-lg font-bold text-green-600">
                         {formatCurrency(order.total)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-600">Payment</div>
+                      <div className="text-sm text-muted-foreground">
+                        Payment
+                      </div>
                       <div>{getPaymentStatusBadge(order.paymentStatus)}</div>
                     </div>
                   </div>

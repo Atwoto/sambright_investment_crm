@@ -199,9 +199,9 @@ export function ProductsManager() {
 
   const filteredPaints = paints.filter((paint) => {
     const matchesSearch =
-      paint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      paint.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      paint.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      (paint.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (paint.brand?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (paint.sku?.toLowerCase() || "").includes(searchTerm.toLowerCase());
     const matchesCategory =
       selectedCategory === "all" || paint.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -209,9 +209,13 @@ export function ProductsManager() {
 
   const filteredPaintings = paintings.filter((painting) => {
     const matchesSearch =
-      painting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      painting.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      painting.medium.toLowerCase().includes(searchTerm.toLowerCase());
+      (painting.title?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (painting.category?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (painting.medium?.toLowerCase() || "").includes(searchTerm.toLowerCase());
     const matchesCategory =
       selectedCategory === "all" || painting.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -503,10 +507,10 @@ export function ProductsManager() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-foreground">
             Product Management
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Manage your paints inventory and artwork collection
           </p>
         </div>
@@ -946,19 +950,19 @@ export function ProductsManager() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border shadow-sm">
+      <Card className="p-6 backdrop-blur-sm border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search products by name, brand, SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500"
+              className="pl-10 focus:border-blue-500"
             />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48 bg-white/80 border-gray-200">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
@@ -979,7 +983,7 @@ export function ProductsManager() {
         onValueChange={setActiveTab}
         className="space-y-8"
       >
-        <TabsList className="bg-white/80 backdrop-blur-sm border shadow-sm">
+        <TabsList className="backdrop-blur-sm border shadow-sm">
           <TabsTrigger
             value="paints"
             className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
@@ -1003,8 +1007,8 @@ export function ProductsManager() {
                 key={paint.id}
                 className={`${
                   paint.stockLevel <= paint.minStockLevel
-                    ? "border-orange-200 bg-gradient-to-br from-orange-50 to-red-50"
-                    : "bg-white/80 backdrop-blur-sm"
+                    ? "border-orange-500/50 bg-gradient-to-br from-orange-500/10 to-red-500/10"
+                    : "backdrop-blur-sm"
                 } hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
               >
                 <CardHeader className="pb-4">
@@ -1030,21 +1034,27 @@ export function ProductsManager() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">SKU:</span>
+                    <span className="text-sm text-muted-foreground">SKU:</span>
                     <span className="text-sm font-mono">{paint.sku}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Color:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Color:
+                    </span>
                     <Badge variant="outline">{paint.color}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Price:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Price:
+                    </span>
                     <span className="font-semibold">
                       {formatCurrency(paint.unitPrice)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Stock:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Stock:
+                    </span>
                     <span
                       className={
                         paint.stockLevel <= paint.minStockLevel
@@ -1056,7 +1066,9 @@ export function ProductsManager() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Supplier:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Supplier:
+                    </span>
                     <span className="text-sm">{paint.supplier}</span>
                   </div>
                   <div className="flex space-x-2 pt-2">
@@ -1072,7 +1084,7 @@ export function ProductsManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
                       onClick={() => handleDeleteProduct(paint.id, "paint")}
                       disabled={deletingId === paint.id}
                     >
@@ -1090,7 +1102,7 @@ export function ProductsManager() {
             {filteredPaintings.map((painting) => (
               <Card
                 key={painting.id}
-                className="bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                className="backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
               >
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start gap-2">
@@ -1107,35 +1119,43 @@ export function ProductsManager() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Category:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Category:
+                    </span>
                     <Badge variant="outline">{painting.category}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Size:</span>
+                    <span className="text-sm text-muted-foreground">Size:</span>
                     <span className="text-sm">{painting.size}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Price:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Price:
+                    </span>
                     <span className="font-semibold">
                       {formatCurrency(painting.price)}
                     </span>
                   </div>
                   {painting.galleryLocation && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Location:</span>
+                      <span className="text-sm text-muted-foreground">
+                        Location:
+                      </span>
                       <span className="text-sm">
                         {painting.galleryLocation}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Created:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Created:
+                    </span>
                     <span className="text-sm">
                       {new Date(painting.dateCreated).toLocaleDateString()}
                     </span>
                   </div>
                   {painting.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
                       {painting.description}
                     </p>
                   )}
@@ -1143,7 +1163,7 @@ export function ProductsManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 hover:bg-blue-50 hover:border-blue-200"
+                      className="flex-1 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:border-blue-700"
                       onClick={() => handleEditPainting(painting)}
                     >
                       <Edit className="h-3 w-3 mr-1" />
@@ -1152,7 +1172,7 @@ export function ProductsManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
                       onClick={() =>
                         handleDeleteProduct(painting.id, "painting")
                       }

@@ -139,9 +139,13 @@ export function ProjectsManager() {
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.projectNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      (project.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (project.clientName?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (project.projectNumber?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      );
     const matchesStatus =
       selectedStatus === "all" || project.status === selectedStatus;
     return matchesSearch && matchesStatus;
@@ -276,7 +280,7 @@ export function ProjectsManager() {
       cancelled: "destructive",
     } as const;
     const colors = {
-      planning: "text-gray-600",
+      planning: "text-muted-foreground",
       in_progress: "text-blue-600",
       completed: "text-green-600",
       on_hold: "text-orange-600",
@@ -301,7 +305,7 @@ export function ProjectsManager() {
       case "on_hold":
         return <AlertCircle className="h-4 w-4 text-orange-600" />;
       default:
-        return <Briefcase className="h-4 w-4 text-gray-600" />;
+        return <Briefcase className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -309,8 +313,8 @@ export function ProjectsManager() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-gray-900">Projects</h2>
-          <p className="text-gray-600">
+          <h2 className="text-3xl font-bold text-foreground">Projects</h2>
+          <p className="text-muted-foreground">
             Manage client projects and track progress
           </p>
         </div>
@@ -514,7 +518,7 @@ export function ProjectsManager() {
                     className="cursor-pointer"
                   />
                   {selectedFiles.length > 0 && (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       {selectedFiles.length} image(s) selected (
                       {(
                         selectedFiles.reduce((sum, f) => sum + f.size, 0) /
@@ -524,7 +528,7 @@ export function ProjectsManager() {
                       MB)
                     </div>
                   )}
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Upload project photos (max 10MB per image)
                   </p>
                 </div>
@@ -561,7 +565,7 @@ export function ProjectsManager() {
               </div>
             </div>
 
-            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-white pt-4 border-t mt-2">
+            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background pt-4 border-t mt-2">
               <Button
                 onClick={handleAddProject}
                 disabled={saving}
@@ -575,19 +579,19 @@ export function ProjectsManager() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6 bg-white/50 backdrop-blur-sm border shadow-sm">
+      <Card className="p-6 backdrop-blur-sm border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search projects by name, client, number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/80 border-gray-200 focus:border-blue-500"
+              className="pl-10 focus:border-blue-500"
             />
           </div>
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-full sm:w-48 bg-white/80 border-gray-200">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -607,7 +611,7 @@ export function ProjectsManager() {
         {filteredProjects.map((project) => (
           <Card
             key={project.id}
-            className="bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+            className="backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
           >
             <CardHeader className="pb-4">
               <div className="flex justify-between items-start gap-2">
@@ -627,21 +631,23 @@ export function ProjectsManager() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center space-x-2 text-sm">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">{project.clientName}</span>
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">{project.clientName}</span>
               </div>
 
               {project.location && (
                 <div className="flex items-center space-x-2 text-sm">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">{project.location}</span>
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {project.location}
+                  </span>
                 </div>
               )}
 
               {project.startDate && (
                 <div className="flex items-center space-x-2 text-sm">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
                     {new Date(project.startDate).toLocaleDateString()}
                     {project.endDate &&
                       ` - ${new Date(project.endDate).toLocaleDateString()}`}
@@ -651,15 +657,15 @@ export function ProjectsManager() {
 
               {project.estimatedBudget && (
                 <div className="flex items-center space-x-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700 font-semibold">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground font-semibold">
                     {formatCurrency(project.estimatedBudget)}
                   </span>
                 </div>
               )}
 
               {project.description && (
-                <p className="text-sm text-gray-600 line-clamp-2">
+                <p className="text-sm text-muted-foreground line-clamp-2">
                   {project.description}
                 </p>
               )}
@@ -722,8 +728,8 @@ export function ProjectsManager() {
       {filteredProjects.length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
-            <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
+            <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
               No projects found. Create your first project!
             </p>
           </CardContent>

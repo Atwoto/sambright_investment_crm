@@ -39,13 +39,17 @@ interface ColorRecommendation {
 export function AIColorAdvisor() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<ColorRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<ColorRecommendation[]>(
+    []
+  );
   const [elapsedTime, setElapsedTime] = useState(0);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   useEffect(() => {
@@ -165,11 +169,11 @@ export function AIColorAdvisor() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 flex items-center space-x-2">
+          <h2 className="text-3xl font-bold text-foreground flex items-center space-x-2">
             <Sparkles className="h-8 w-8 text-purple-600" />
             <span>AI Color Advisor</span>
           </h2>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted-foreground mt-1">
             Upload house images to get AI recommendations and 3D visual previews
           </p>
         </div>
@@ -207,11 +211,11 @@ export function AIColorAdvisor() {
                 htmlFor="image-upload"
                 className="cursor-pointer flex flex-col items-center space-y-2"
               >
-                <ImageIcon className="h-12 w-12 text-gray-400" />
-                <span className="text-sm text-gray-600">
+                <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
                   Click to upload or drag and drop
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   PNG, JPG, WEBP up to 10MB each
                 </span>
               </label>
@@ -351,8 +355,7 @@ export function AIColorAdvisor() {
                   {formatTime(elapsedTime)}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  This usually takes 3-4 minutes. Please don't close this
-                  page.
+                  This usually takes 3-4 minutes. Please don't close this page.
                 </p>
               </div>
             </div>
@@ -404,7 +407,7 @@ export function AIColorAdvisor() {
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
                           AI-Generated 3D Preview:
                         </h4>
-                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="bg-card rounded-lg p-4 border">
                           <img
                             src={rec.generatedImage}
                             alt={`${rec.description} painted house preview`}
@@ -426,7 +429,7 @@ export function AIColorAdvisor() {
                           <Badge
                             key={idx}
                             variant="outline"
-                            className="bg-white px-4 py-2 text-sm"
+                            className="bg-card px-4 py-2 text-sm"
                           >
                             {color}
                           </Badge>
@@ -434,7 +437,7 @@ export function AIColorAdvisor() {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="bg-card rounded-lg p-4 border">
                       <h4 className="text-sm font-medium text-gray-700 mb-2">
                         Application & Reasoning:
                       </h4>

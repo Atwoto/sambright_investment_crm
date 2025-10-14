@@ -178,13 +178,15 @@ export function InventoryTransactions() {
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
-      transaction.transactionNumber
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      transaction.productName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      transaction.reason.toLowerCase().includes(searchTerm.toLowerCase());
+      (transaction.transactionNumber?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (transaction.productName?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (transaction.reason?.toLowerCase() || "").includes(
+        searchTerm.toLowerCase()
+      );
     const matchesType =
       selectedType === "all" || transaction.type === selectedType;
 
@@ -450,7 +452,7 @@ export function InventoryTransactions() {
       case "lost":
         return <AlertTriangle className="h-4 w-4 text-red-600" />;
       default:
-        return <Package className="h-4 w-4 text-gray-600" />;
+        return <Package className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -547,10 +549,10 @@ export function InventoryTransactions() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">
+          <h2 className="text-2xl font-semibold text-foreground">
             Inventory Transactions
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Track all inventory movements and adjustments
           </p>
         </div>
@@ -834,7 +836,7 @@ export function InventoryTransactions() {
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search transactions..."
             value={searchTerm}
@@ -906,14 +908,14 @@ export function InventoryTransactions() {
                       </Button>
                     </div>
 
-                    <div className="text-gray-900 font-medium mb-1">
+                    <div className="text-foreground font-medium mb-1">
                       {transaction.productName}
                     </div>
-                    <div className="text-sm text-gray-600 mb-2">
+                    <div className="text-sm text-muted-foreground mb-2">
                       {transaction.reason}
                     </div>
 
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
                         <span>
@@ -935,7 +937,7 @@ export function InventoryTransactions() {
                     </div>
 
                     {transaction.notes && (
-                      <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded mt-2">
+                      <p className="text-sm text-muted-foreground bg-muted p-2 rounded mt-2">
                         {transaction.notes}
                       </p>
                     )}
@@ -947,12 +949,12 @@ export function InventoryTransactions() {
                     {getQuantityDisplay(transaction)}
                   </div>
                   {transaction.totalCost && (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       {formatCurrency(transaction.totalCost)}
                     </div>
                   )}
                   {transaction.unitCost && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       {formatCurrency(transaction.unitCost)}/unit
                     </div>
                   )}
@@ -965,8 +967,8 @@ export function InventoryTransactions() {
         {filteredTransactions.length === 0 && (
           <Card>
             <CardContent className="text-center py-8">
-              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
                 No transactions found matching your criteria.
               </p>
             </CardContent>

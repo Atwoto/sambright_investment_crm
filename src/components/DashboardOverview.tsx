@@ -256,8 +256,8 @@ export function DashboardOverview() {
         {[...Array(8)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader className="space-y-0 pb-2">
-              <div className="h-4 bg-gray-200 rounded w-20"></div>
-              <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div className="h-4 bg-muted rounded w-20"></div>
+              <div className="h-8 bg-muted rounded w-16"></div>
             </CardHeader>
           </Card>
         ))}
@@ -269,10 +269,10 @@ export function DashboardOverview() {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">
+          <h2 className="text-2xl font-semibold text-foreground">
             Dashboard Overview
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Welcome back! Here's what's happening in your painting business.
           </p>
         </div>
@@ -419,12 +419,14 @@ export function DashboardOverview() {
               {stats.recentActivity.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-start space-x-3 pb-3 border-b border-gray-100 last:border-0"
+                  className="flex items-start space-x-3 pb-3 border-b border-border last:border-0"
                 >
                   <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-foreground">
+                      {activity.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {activity.timestamp}
                     </p>
                   </div>
@@ -432,8 +434,8 @@ export function DashboardOverview() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
               <p className="text-sm">No recent activity</p>
               <p className="text-xs mt-1">
                 Activity will appear here as you use the system
