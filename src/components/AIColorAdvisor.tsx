@@ -39,42 +39,29 @@ interface ColorRecommendation {
 export function AIColorAdvisor() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<ColorRecommendation[]>(
-    []
-  );
+  const [recommendations, setRecommendations] = useState<ColorRecommendation[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
-
-  // Timer utility functions
-  const startTimer = () => {
-    setElapsedTime(0);
-    const interval = setInterval(() => {
-      setElapsedTime((prev) => prev + 1);
-    }, 1000);
-    setTimerInterval(interval);
-  };
-
-  const stopTimer = () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      setTimerInterval(null);
-    }
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Cleanup timer on component unmount
   useEffect(() => {
+    if (!isLoading) {
+      setElapsedTime(0);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
+
     return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
+      clearInterval(intervalId);
     };
-  }, [timerInterval]);
+  }, [isLoading]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -118,7 +105,6 @@ export function AIColorAdvisor() {
 
     setIsLoading(true);
     setRecommendations([]);
-    startTimer();
 
     try {
       const imagePromises = uploadedImages.map((img) => {
@@ -132,7 +118,6 @@ export function AIColorAdvisor() {
 
       const base64Images = await Promise.all(imagePromises);
 
-      // --- MODIFICATION #1: Use the PRODUCTION Webhook URL ---
       const webhookUrl =
         "https://n8n-n2hx.onrender.com/webhook/ai-color-advisor";
 
@@ -165,7 +150,6 @@ export function AIColorAdvisor() {
       console.error("Error getting AI recommendations:", error);
       toast.error(error.message || "An unknown error occurred.");
     } finally {
-      stopTimer();
       setIsLoading(false);
     }
   };
@@ -174,8 +158,6 @@ export function AIColorAdvisor() {
     uploadedImages.forEach((img) => URL.revokeObjectURL(img.preview));
     setUploadedImages([]);
     setRecommendations([]);
-    stopTimer();
-    setElapsedTime(0);
     setIsLoading(false);
   };
 
@@ -274,58 +256,6 @@ export function AIColorAdvisor() {
                 </div>
               </div>
             )}
-
-            <Button
-              onClick={getAiRecommendationsAndPreviews}
-              disabled={uploadedImages.length === 0 || isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg border-0 mt-4"
-              size="lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Generating AI Recommendations & 3D Previews...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Get AI Recommendations & 3D Previews
-                </>
-              )}
-            </Button>
-
-            {isLoading && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-center space-x-3">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-blue-900">
-                      Processing your images...
-                    </p>
-                    <p className="text-lg font-mono font-bold text-blue-700 mt-1">
-                      {formatTime(elapsedTime)}
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      This usually takes 3-4 minutes. Please don't close this page.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mt-3">
-                  <div className="bg-blue-200 rounded-full h-2 overflow-hidden">
-                    <div 
-                      className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
-                      style={{ 
-                        width: `${Math.min((elapsedTime / 240) * 100, 100)}%` 
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-blue-600 text-center mt-1">
-                    Estimated completion: {Math.max(0, 240 - elapsedTime)} seconds remaining
-                  </p>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -387,6 +317,58 @@ export function AIColorAdvisor() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="space-y-4 mt-6">
+        <Button
+          onClick={getAiRecommendationsAndPreviews}
+          disabled={uploadedImages.length === 0 || isLoading}
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg border-0 py-6 text-lg"
+          size="lg"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+              Generating AI Recommendations & 3D Previews...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-5 w-5 mr-3" />
+              Get AI Recommendations & 3D Previews
+            </>
+          )}
+        </Button>
+
+        {isLoading && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-center space-x-3">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <div className="text-center">
+                <p className="text-sm font-medium text-blue-900">
+                  Processing your images...
+                </p>
+                <p className="text-lg font-mono font-bold text-blue-700 mt-1">
+                  {formatTime(elapsedTime)}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  This usually takes 3-4 minutes. Please don't close this
+                  page.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <div className="bg-blue-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
+                  style={{
+                    width: `${Math.min((elapsedTime / 210) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {recommendations.length > 0 && (
