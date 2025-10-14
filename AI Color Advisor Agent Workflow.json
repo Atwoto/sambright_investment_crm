@@ -1,178 +1,336 @@
 {
-    "name": "AI Color Advisor Agent Workflow",
-    "nodes": [
-        {
-            "parameters": {
-                "httpMethod": "POST",
-                "path": "ai-color-advisor",
-                "responseMode": "responseNode",
-                "options": {}
-            },
-            "id": "webhook-trigger",
-            "name": "Webhook Trigger",
-            "type": "n8n-nodes-base.webhook",
-            "typeVersion": 1,
-            "position": [
-                240,
-                300
-            ],
-            "webhookId": "ai-color-advisor-webhook"
-        },
-        {
-            "parameters": {
-                "agent": "conversationalAgent",
-                "promptType": "define",
-                "text": "You are an expert color consultant and 3D visualization specialist. Your task is to:\n\n1. Analyze the provided house images\n2. Generate exactly 3 distinct, professional exterior color palette recommendations\n3. For each recommendation, create a photorealistic 3D preview showing how the house would look painted with those colors\n\nFor each recommendation, you must return a JSON object with:\n- id: unique identifier (rec_1, rec_2, rec_3)\n- description: descriptive name for the color scheme\n- colors: array of 3-5 specific color names\n- reasoning: detailed explanation including color application (which colors go where) and why this palette works\n- generatedImage: base64 encoded image showing the 3D preview\n\nReturn your response as a valid JSON array containing exactly 3 recommendation objects. Focus on creating realistic, appealing color combinations that complement the house's architecture and surroundings.",
-                "hasOutputParser": true,
-                "outputParser": "autoFixingOutputParser",
-                "options": {
-                    "systemMessage": "Always respond with valid JSON. Generate realistic 3D previews for each color recommendation."
-                }
-            },
-            "id": "ai-color-agent",
-            "name": "AI Color Agent",
-            "type": "@n8n/n8n-nodes-langchain.agent",
-            "typeVersion": 1.6,
-            "position": [
-                460,
-                300
-            ],
-            "credentials": {
-                "openRouterApi": {
-                    "id": "openrouter-credentials",
-                    "name": "OpenRouter API"
-                }
+  "name": "AI Color Advisor Agent Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-color-advisor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "30a79d1c-b7ab-46f0-8e81-e4324b004d20",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        336
+      ],
+      "webhookId": "ai-color-advisor-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
+          ]
         },
-        {
-            "parameters": {
-                "model": "google/gemini-2.0-flash-exp",
-                "options": {
-                    "temperature": 0.7,
-                    "maxTokens": 2000
-                }
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "google/gemini-2.5-flash-image"
             },
-            "id": "openrouter-llm",
-            "name": "OpenRouter LLM",
-            "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
-            "typeVersion": 1,
-            "position": [
-                460,
-                420
-            ],
-            "credentials": {
-                "openRouterApi": {
-                    "id": "openrouter-credentials",
-                    "name": "OpenRouter API"
-                }
+            {
+              "name": "messages",
+              "value": "={{[\n{\n\"role\": \"user\",\n\"content\": [\n{\n\"type\": \"image_url\",\n\"image_url\": {\n\"url\": $(\"Webhook Trigger\").first().json.body.base64Images[0]\n}\n},\n{\n\"type\": \"text\",\n\"text\": \"You are an expert color consultant. Analyze the provided house image and generate exactly 3 distinct, professional exterior color palette recommendations. Return your response as a valid JSON array only, with no other text. Each object in the array should have these keys: 'name' (descriptive name), 'colors' (an array of 3-5 color names), 'application' (where each color goes), and 'reasoning' (why this palette works).\"\n}\n]\n}\n]}}"
             }
+          ]
         },
-        {
-            "parameters": {
-                "jsCode": "// Process the input images and format them for the AI agent\nconst inputData = $input.first().json;\nconst base64Images = inputData.base64Images || [];\n\nif (base64Images.length === 0) {\n  throw new Error('No images provided');\n}\n\n// Create a formatted message with images for the AI agent\nconst imageDescriptions = base64Images.map((img, index) => \n  `Image ${index + 1}: ${img.substring(0, 50)}...`\n).join('\\n');\n\nconst formattedInput = {\n  input: `Please analyze these ${base64Images.length} house images and provide 3 color recommendations with 3D previews:\\n\\n${imageDescriptions}`,\n  images: base64Images\n};\n\nreturn [{ json: formattedInput }];"
-            },
-            "id": "format-input",
-            "name": "Format Input",
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                350,
-                300
-            ]
-        },
-        {
-            "parameters": {
-                "jsCode": "// Parse and validate the AI agent response\nconst agentResponse = $input.first().json;\n\ntry {\n  let recommendations;\n  \n  // Extract the response from the agent output\n  if (agentResponse.output) {\n    recommendations = typeof agentResponse.output === 'string' \n      ? JSON.parse(agentResponse.output) \n      : agentResponse.output;\n  } else if (agentResponse.text) {\n    recommendations = JSON.parse(agentResponse.text);\n  } else {\n    recommendations = agentResponse;\n  }\n  \n  // Validate structure\n  if (!Array.isArray(recommendations)) {\n    throw new Error('Response is not an array');\n  }\n  \n  if (recommendations.length !== 3) {\n    throw new Error(`Expected 3 recommendations, got ${recommendations.length}`);\n  }\n  \n  // Ensure each recommendation has required fields\n  const processedRecommendations = recommendations.map((rec, index) => {\n    if (!rec.id) rec.id = `rec_${index + 1}`;\n    if (!rec.description) rec.description = `Color Recommendation ${index + 1}`;\n    if (!rec.colors || !Array.isArray(rec.colors)) rec.colors = ['Color information not available'];\n    if (!rec.reasoning) rec.reasoning = 'Reasoning not provided';\n    if (!rec.generatedImage) rec.generatedImage = null;\n    \n    return rec;\n  });\n  \n  return [{ json: processedRecommendations }];\n  \n} catch (error) {\n  console.error('Error parsing AI response:', error);\n  \n  // Return fallback response\n  const fallbackRecommendations = [\n    {\n      id: 'rec_1',\n      description: 'Classic Neutral Palette',\n      colors: ['Warm Gray', 'Crisp White', 'Charcoal'],\n      reasoning: 'A timeless combination that works well with most architectural styles.',\n      generatedImage: null\n    },\n    {\n      id: 'rec_2',\n      description: 'Modern Coastal',\n      colors: ['Navy Blue', 'White', 'Light Gray'],\n      reasoning: 'Fresh and contemporary palette inspired by coastal living.',\n      generatedImage: null\n    },\n    {\n      id: 'rec_3',\n      description: 'Warm Traditional',\n      colors: ['Sage Green', 'Cream', 'Dark Brown'],\n      reasoning: 'Earthy tones that complement natural surroundings.',\n      generatedImage: null\n    }\n  ];\n  \n  return [{ json: fallbackRecommendations }];\n}"
-            },
-            "id": "process-response",
-            "name": "Process Response",
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                680,
-                300
-            ]
-        },
-        {
-            "parameters": {
-                "respondWith": "json",
-                "responseBody": "={{ $json }}"
-            },
-            "id": "respond-to-webhook",
-            "name": "Respond to Webhook",
-            "type": "n8n-nodes-base.respondToWebhook",
-            "typeVersion": 1,
-            "position": [
-                900,
-                300
-            ]
+        "options": {}
+      },
+      "id": "e2444834-0a34-47c7-92b5-c21ec5ca8a26",
+      "name": "Get Color Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -864,
+        336
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "AChCL1IUeeyFytGm",
+          "name": "sambright"
         }
-    ],
-    "connections": {
-        "Webhook Trigger": {
-            "main": [
-                [
-                    {
-                        "node": "Format Input",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the AI response and extract recommendations\ntry {\n  const response = $input.first().json;\n  const content = response.choices[0].message.content;\n\n  // Clean the content and parse JSON\n  let cleanContent = content.trim();\n  if (cleanContent.startsWith('```json')) {\n    cleanContent = cleanContent.replace(/```json\\n?/, '').replace(/\\n?```$/, '');\n  }\n\n  const recommendations = JSON.parse(cleanContent);\n\n  // Validate that we have exactly 3 recommendations\n  if (!Array.isArray(recommendations) || recommendations.length !== 3) {\n    throw new Error('Expected exactly 3 recommendations');\n  }\n\n  // Add unique IDs and ensure proper structure\n  const processedRecommendations = recommendations.map((rec, index) => {\n    // THIS IS THE FIX: Properly format the application object into a clean string\n    let applicationText = '';\n    if (rec.application && typeof rec.application === 'object') {\n      applicationText = Object.entries(rec.application)\n        .map(([key, value]) => `${key}: ${value}`)\n        .join('. ');\n    }\n\n    return {\n      id: `rec_${index + 1}`,\n      description: rec.name || `Recommendation ${index + 1}`,\n      colors: rec.colors || [],\n      // Combine the new clean string with the reasoning\n      reasoning: `${applicationText}. ${rec.reasoning || ''}`.trim(),\n      // Use the correct path to the image, including .body\n      originalImage: $('Webhook Trigger').first().json.body.base64Images\n    };\n  });\n\n  return processedRecommendations.map(rec => ({ json: rec }));\n\n} catch (error) {\n  throw new Error(`Failed to parse recommendations: ${error.message}`);\n}"
+      },
+      "id": "03694917-f034-43ee-8421-015df996119a",
+      "name": "Parse Recommendations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "630868c7-4803-48f0-9a55-6d561369c8d9",
+      "name": "Loop Over Recommendations",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -416,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
         },
-        "Format Input": {
-            "main": [
-                [
-                    {
-                        "node": "AI Color Agent",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "AI Color Agent": {
-            "main": [
-                [
-                    {
-                        "node": "Process Response",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Process Response": {
-            "main": [
-                [
-                    {
-                        "node": "Respond to Webhook",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "OpenRouter LLM": {
-            "ai_languageModel": [
-                [
-                    {
-                        "node": "AI Color Agent",
-                        "type": "ai_languageModel",
-                        "index": 0
-                    }
-                ]
-            ]
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "id": "136efa70-a4d4-4600-81e1-05e093867849",
+      "name": "Generate 3D Preview",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -48,
+        112
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "AChCL1IUeeyFytGm",
+          "name": "sambright"
         }
+      }
     },
-    "active": true,
-    "settings": {
-        "executionOrder": "v1"
+    {
+      "parameters": {
+        "jsCode": "// Get the original data for this specific loop iteration\nconst recommendationData = $('Loop Over Recommendations').first().json;\n\n// Get the AI response from the node right before this one\nconst aiResponse = $input.first().json;\n\ntry {\n  let generatedImage = null;\n  \n  // Check if the AI response is valid and contains a message\n  if (aiResponse.choices && aiResponse.choices[0] && aiResponse.choices[0].message) {\n    const message = aiResponse.choices[0].message;\n    \n    // Check if the AI returned a base64 image string as requested\n    if (message.content && typeof message.content === 'string' && message.content.startsWith('data:image/')) {\n      generatedImage = message.content;\n    }\n  }\n  \n  // If no valid image was generated, use the original image as a fallback\n  if (!generatedImage) {\n    console.log('No generated image found, using original image as fallback');\n    // Remember to select the first image from the array\n    generatedImage = recommendationData.originalImage[0];\n  }\n  \n  // Combine the original recommendation data with the new 3D image\n  const result = {\n    id: recommendationData.id,\n    description: recommendationData.description,\n    colors: recommendationData.colors,\n    reasoning: recommendationData.reasoning,\n    generatedImage: generatedImage\n  };\n  \n  return [{ json: result }];\n  \n} catch (error) {\n  console.error('Error processing 3D preview:', error);\n  \n  // On error, return the original data with the original image\n  const result = {\n    id: recommendationData.id,\n    description: recommendationData.description,\n    colors: recommendationData.colors,\n    reasoning: recommendationData.reasoning,\n    generatedImage: recommendationData.originalImage[0] // Fallback to original\n  };\n  \n  return [{ json: result }];\n}"
+      },
+      "id": "e0e8fb39-0d7f-4b3d-8f49-53ee949ddb4a",
+      "name": "Process 3D Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -192
+      ]
     },
-    "versionId": "1",
-    "meta": {
-        "templateCredsSetupCompleted": true
+    {
+      "parameters": {
+        "jsCode": "// Get all the processed items from the loop\nconst allItems = $input.all();\n\n// Filter out any malformed items to be safe\nconst validResults = allItems\n  .map(item => item.json)\n  .filter(item => item && typeof item === 'object' && item.id);\n\n// Sort the results to ensure a consistent order\nconst sortedResults = validResults.sort((a, b) => a.id.localeCompare(b.id));\n\nconsole.log(`Returning ${sortedResults.length} valid recommendations.`);\n\n// THIS IS THE FIX:\n// Return a SINGLE item where the 'json' property is an OBJECT that CONTAINS the array.\nreturn [{\n  json: {\n    recommendations: sortedResults\n  }\n}];"
+      },
+      "id": "40e43a55-76b9-494f-9acb-c8859d61b33d",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        336
+      ]
     },
-    "id": "ai-color-advisor-agent-workflow",
-    "tags": []
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.recommendations }}",
+        "options": {}
+      },
+      "id": "fe8fff3a-f1c9-4f72-9dd6-1485937ab249",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        464,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data from the Loop node\nconst inputData = $input.first().json;\n\n// Construct the entire request body object\nconst requestBody = {\n  model: \"google/gemini-2.5-flash-image\",\n  messages: [\n    {\n      role: \"user\",\n      content: [\n        {\n          type: \"image_url\",\n          image_url: {\n            // Select the first image from the array\n            url: inputData.originalImage[0]\n          }\n        },\n        {\n          type: \"text\",\n          // Build the text prompt safely using a template literal\n          text: `You are a 3D visualization specialist. Re-render the provided house image to look photorealistic, painted with the following exterior color scheme. Description: ${JSON.stringify(inputData.description)}. Colors to use: ${JSON.stringify(inputData.colors)}. Application details: ${JSON.stringify(inputData.reasoning)}. Return ONLY the final image as a base64 encoded string, with no other text, no markdown, and no JSON formatting.`\n        }\n      ]\n    }\n  ]\n};\n\n// Return the fully constructed object in a field named 'requestBody'\nreturn [{\n  json: {\n    requestBody: requestBody\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        208
+      ],
+      "id": "4233ffef-ee61-4d1a-aaa5-590aab45da27",
+      "name": "Prepare 3D Request"
+    }
+  ],
+  "pinData": {
+    "Webhook Trigger": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n-n2hx.onrender.com",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+            "content-length": "12904",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "en-US,en;q=0.9,ja;q=0.8,af;q=0.7,sw;q=0.6",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "102.205.238.5",
+            "cf-ipcountry": "KE",
+            "cf-ray": "98e2ce917a34acb9-NBO",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "content-type": "application/json",
+            "origin": "https://sambright-investment-crm-beta.vercel.app",
+            "priority": "u=1, i",
+            "referer": "https://sambright-investment-crm-beta.vercel.app/",
+            "render-proxy-ttl": "4",
+            "rndr-id": "d0aff06c-9b2c-452f",
+            "sec-ch-ua": "\"Google Chrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "true-client-ip": "102.205.238.5",
+            "x-forwarded-for": "102.205.238.5, 172.68.47.143",
+            "x-forwarded-proto": "https",
+            "x-request-start": "1760400136093148"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "base64Images": [
+              "data:image/jpeg;base64,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"
+            ]
+          },
+          "webhookUrl": "https://n8n-n2hx.onrender.com/webhook/ai-color-advisor",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Color Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Color Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Parse Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare 3D Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate 3D Preview": {
+      "main": [
+        [
+          {
+            "node": "Process 3D Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process 3D Result": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare 3D Request": {
+      "main": [
+        [
+          {
+            "node": "Generate 3D Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ad84305c-59cd-4335-93a6-f1e046d0061a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "af777af6413674a4919198240257c5520ef8e915d5eee203f7aa3d3a47afd76d"
+  },
+  "id": "3dCTBRbjRYBnXtcl",
+  "tags": []
 }

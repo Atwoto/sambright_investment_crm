@@ -113,13 +113,11 @@ export function AIColorAdvisor() {
 
       const result = await response.json();
 
-      const recommendations = result.recommendations;
-
-      if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
-        throw new Error("The n8n workflow returned no valid recommendations.");
+      if (!result || !Array.isArray(result) || result.length === 0) {
+        throw new Error("The n8n workflow returned no valid recommendations, or the format was incorrect.");
       }
 
-      setRecommendations(recommendations);
+      setRecommendations(result);
       toast.success("Successfully generated AI recommendations and 3D previews!");
 
     } catch (error: any) {
