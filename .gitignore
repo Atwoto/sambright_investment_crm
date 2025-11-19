@@ -38,3 +38,6 @@ dist-ssr
 # Kiro IDE
 .kiro/
 .kiro/*
+
+# Images
+s1.jpg
