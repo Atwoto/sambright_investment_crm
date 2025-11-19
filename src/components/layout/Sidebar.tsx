@@ -73,7 +73,7 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, toggleCollapse, 
                   ? 'bg-primary/15 text-primary shadow-lg shadow-primary/10 border border-primary/20'
                   : 'hover:bg-white/60 dark:hover:bg-gray-800/60 text-muted-foreground hover:text-foreground hover:shadow-md'
                 }
-                ${item.highlight && !isActive ? 'text-gradient-primary font-medium' : ''}
+                ${item.highlight && !isActive ? 'border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5 text-primary dark:text-primary font-semibold' : ''}
               `}
             >
               {/* Active indicator */}
