@@ -845,7 +845,7 @@ export function InventoryTransactions() {
         {filteredTransactions.map((transaction, index) => (
           <div
             key={transaction.id}
-            className="glass-card p-4 rounded-xl hover:shadow-md transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-enter"
+            className="glass-card p-4 rounded-xl hover:shadow-md transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center gap-4 cursor-pointer animate-enter"
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-800">

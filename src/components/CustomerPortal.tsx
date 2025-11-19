@@ -255,7 +255,7 @@ export function CustomerPortal() {
 
       {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-3 animate-enter" style={{ animationDelay: '100ms' }}>
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <FileText className="h-24 w-24 text-blue-500" />
           </div>
@@ -271,7 +271,7 @@ export function CustomerPortal() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <DollarSign className="h-24 w-24 text-red-500" />
           </div>
@@ -287,7 +287,7 @@ export function CustomerPortal() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Calendar className="h-24 w-24 text-emerald-500" />
           </div>
@@ -346,7 +346,7 @@ export function CustomerPortal() {
               return (
                 <div
                   key={invoice.id}
-                  className="glass-card p-6 rounded-xl transition-all duration-300 hover:shadow-md border-l-4"
+                  className="glass-card p-6 rounded-xl transition-all duration-300 hover:shadow-md border-l-4 cursor-pointer"
                   style={{ borderLeftColor: invoice.status === 'overdue' ? '#ef4444' : invoice.status === 'paid' ? '#10b981' : '#f59e0b' }}
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">

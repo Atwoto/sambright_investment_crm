@@ -889,7 +889,7 @@ export function OrdersManager() {
             {filteredOrders.map((order, index) => (
               <div
                 key={order.id}
-                className="group glass-card rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 animate-enter"
+                className="group glass-card rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 cursor-pointer animate-enter"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="p-5 space-y-4">

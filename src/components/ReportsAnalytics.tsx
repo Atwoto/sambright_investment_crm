@@ -363,7 +363,7 @@ export function ReportsAnalytics() {
 
       {/* Key Metrics */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-enter" style={{ animationDelay: '100ms' }}>
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <DollarSign className="h-24 w-24 text-primary" />
           </div>
@@ -384,7 +384,7 @@ export function ReportsAnalytics() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Palette className="h-24 w-24 text-blue-500" />
           </div>
@@ -403,7 +403,7 @@ export function ReportsAnalytics() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <ShoppingCart className="h-24 w-24 text-purple-500" />
           </div>
@@ -424,7 +424,7 @@ export function ReportsAnalytics() {
           </div>
         </div>
 
-        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
           <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <AlertTriangle className="h-24 w-24 text-orange-500" />
           </div>
