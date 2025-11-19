@@ -11,9 +11,21 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { Download, FileText, Search, Calendar, DollarSign } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Search,
+  Calendar,
+  DollarSign,
+  CreditCard,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ArrowUpRight
+} from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { cn } from "../lib/utils";
 
 interface Invoice {
   id: string;
@@ -121,16 +133,28 @@ export function CustomerPortal() {
       )
   );
 
-  const getStatusColor = (status: Invoice["status"]) => {
+  const getStatusConfig = (status: Invoice["status"]) => {
     switch (status) {
       case "paid":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+        return {
+          color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+          icon: CheckCircle2
+        };
       case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+        return {
+          color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+          icon: Clock
+        };
       case "overdue":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+        return {
+          color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+          icon: AlertCircle
+        };
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+        return {
+          color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
+          icon: FileText
+        };
     }
   };
 
@@ -157,8 +181,7 @@ export function CustomerPortal() {
         ${invoice.items
           .map(
             (item) =>
-              `${item.description} - Qty: ${
-                item.quantity
+              `${item.description} - Qty: ${item.quantity
               } - Price: $${item.price.toFixed(
                 2
               )} - Total: $${item.total.toFixed(2)}`
@@ -197,20 +220,16 @@ export function CustomerPortal() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 animate-in fade-in-50 duration-500">
         <div className="flex items-center justify-between">
-          <h2>My Invoices & Receipts</h2>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">My Invoices & Receipts</h2>
+            <div className="h-4 bg-muted rounded w-64 animate-pulse"></div>
+          </div>
         </div>
-        <div className="grid gap-4">
+        <div className="grid gap-6 md:grid-cols-3">
           {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-muted rounded w-1/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={i} className="glass-card h-32 animate-pulse rounded-xl"></div>
           ))}
         </div>
       </div>
@@ -218,156 +237,190 @@ export function CustomerPortal() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2>My Invoices & Receipts</h2>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 animate-enter">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <CreditCard className="h-6 w-6 text-primary" />
+            </div>
+            My Invoices & Receipts
+          </h2>
           <p className="text-muted-foreground">
-            Welcome, {user?.name}! Download your invoices and receipts below.
+            Welcome, {user?.name}! Manage and download your invoices.
           </p>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Invoices
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.length}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 md:grid-cols-3 animate-enter" style={{ animationDelay: '100ms' }}>
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <FileText className="h-24 w-24 text-blue-500" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Total Invoices</h3>
+            <div className="p-2 bg-blue-500/10 rounded-full">
+              <FileText className="h-4 w-4 text-blue-500" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground">{invoices.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Lifetime total</p>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Amount Owed</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalOwed.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <DollarSign className="h-24 w-24 text-red-500" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Amount Owed</h3>
+            <div className="p-2 bg-red-500/10 rounded-full">
+              <DollarSign className="h-4 w-4 text-red-500" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground">${totalOwed.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Pending payments</p>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Paid This Year
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Calendar className="h-24 w-24 text-emerald-500" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Paid This Year</h3>
+            <div className="p-2 bg-emerald-500/10 rounded-full">
+              <Calendar className="h-4 w-4 text-emerald-500" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground">
               $
               {invoices
                 .filter((inv) => inv.status === "paid")
                 .reduce((sum, inv) => sum + inv.amount, 0)
                 .toFixed(2)}
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Successfully processed</p>
+          </div>
+        </div>
       </div>
 
       {/* Search */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search invoices..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="glass-card p-6 rounded-xl animate-enter" style={{ animationDelay: '200ms' }}>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search invoices by number or item description..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 glass-input"
+          />
+        </div>
+      </div>
 
       {/* Invoices List */}
-      <div className="space-y-4">
+      <div className="space-y-4 animate-enter" style={{ animationDelay: '300ms' }}>
         {filteredInvoices.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">
-                {searchTerm
-                  ? "No invoices found matching your search."
-                  : "No invoices found."}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="glass-card p-12 rounded-xl text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">No invoices found</h3>
+            <p className="text-muted-foreground mt-1">
+              {searchTerm
+                ? "Try adjusting your search terms."
+                : "You don't have any invoices yet."}
+            </p>
+          </div>
         ) : (
-          filteredInvoices.map((invoice) => (
-            <Card key={invoice.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {invoice.invoiceNumber}
-                    </CardTitle>
-                    <CardDescription>
-                      Issued: {new Date(invoice.date).toLocaleDateString()} •
-                      Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                    </CardDescription>
-                  </div>
-                  <div className="text-right space-y-2">
-                    <div className="text-2xl font-bold">
-                      ${invoice.amount.toFixed(2)}
-                    </div>
-                    <Badge className={getStatusColor(invoice.status)}>
-                      {invoice.status.charAt(0).toUpperCase() +
-                        invoice.status.slice(1)}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
+          <div className="grid gap-4">
+            {filteredInvoices.map((invoice) => {
+              const statusConfig = getStatusConfig(invoice.status);
+              const StatusIcon = statusConfig.icon;
 
-              <CardContent className="space-y-4">
-                {/* Items */}
-                <div>
-                  <Label className="text-sm font-medium">Items:</Label>
-                  <div className="mt-2 space-y-2">
-                    {invoice.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center text-sm"
-                      >
-                        <span className="flex-1">{item.description}</span>
-                        <span className="text-muted-foreground mx-2">
-                          Qty: {item.quantity}
+              return (
+                <div
+                  key={invoice.id}
+                  className="glass-card p-6 rounded-xl transition-all duration-300 hover:shadow-md border-l-4"
+                  style={{ borderLeftColor: invoice.status === 'overdue' ? '#ef4444' : invoice.status === 'paid' ? '#10b981' : '#f59e0b' }}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-bold text-foreground">
+                          {invoice.invoiceNumber}
+                        </h3>
+                        <Badge variant="outline" className={cn("font-normal flex items-center gap-1.5", statusConfig.color)}>
+                          <StatusIcon className="h-3 w-3" />
+                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Issued: {new Date(invoice.date).toLocaleDateString()}
                         </span>
-                        <span className="font-medium">
-                          ${item.total.toFixed(2)}
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Due: {new Date(invoice.dueDate).toLocaleDateString()}
                         </span>
                       </div>
-                    ))}
+                    </div>
+                    <div className="text-left md:text-right">
+                      <div className="text-2xl font-bold text-foreground">
+                        ${invoice.amount.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Total Amount</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/30 rounded-lg p-4 mb-6">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">Items</Label>
+                    <div className="space-y-3">
+                      {invoice.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center text-sm group"
+                        >
+                          <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+                            {item.description}
+                          </span>
+                          <div className="flex items-center gap-4 text-muted-foreground">
+                            <span>Qty: {item.quantity}</span>
+                            <span className="font-medium text-foreground w-20 text-right">
+                              ${item.total.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-border/50">
+                    <Button
+                      onClick={() => generatePDF(invoice)}
+                      disabled={generatingPDF === invoice.id}
+                      className="glass-button group"
+                    >
+                      {generatingPDF === invoice.id ? (
+                        <>Generating...</>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2 group-hover:-translate-y-0.5 transition-transform" />
+                          Download Invoice
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
-
-                <Separator />
-
-                {/* Actions */}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => generatePDF(invoice)}
-                    disabled={generatingPDF === invoice.id}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>
-                      {generatingPDF === invoice.id
-                        ? "Generating..."
-                        : "Download Invoice"}
-                    </span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

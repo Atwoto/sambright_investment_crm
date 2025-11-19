@@ -37,11 +37,23 @@ import {
   Palette,
   Brush,
   AlertTriangle,
+  Package,
+  Filter,
+  Trash2,
+  MoreHorizontal
 } from "lucide-react";
 import { toast } from "sonner";
-import { API_BASE } from "../utils/api";
 import { formatCurrency } from "../utils/currency";
 import { useAuth } from "../contexts/AuthContext";
+import { cn } from "../lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 interface Paint {
   id: string;
@@ -149,9 +161,6 @@ export function ProductsManager() {
 
         setPaints(paintsFromDb);
         setPaintings(paintingsFromDb);
-        console.log(
-          `Loaded ${paintsFromDb.length} paints and ${paintingsFromDb.length} paintings from database`
-        );
       } catch (error) {
         console.error("Error loading products:", error);
         toast.error("Failed to load products");
@@ -491,23 +500,27 @@ export function ProductsManager() {
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      available: "default",
-      sold: "secondary",
-      reserved: "outline",
-      consignment: "default",
+      available: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
+      sold: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+      reserved: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+      consignment: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800",
     } as const;
+
+    const className = variants[status as keyof typeof variants] || "bg-gray-100 text-gray-700";
+
     return (
-      <Badge variant={variants[status as keyof typeof variants] || "outline"}>
+      <Badge variant="outline" className={cn("capitalize border", className)}>
         {status}
       </Badge>
     );
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 animate-enter">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-foreground">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">
             Product Management
           </h2>
           <p className="text-muted-foreground">
@@ -517,12 +530,12 @@ export function ProductsManager() {
         <div className="flex flex-col sm:flex-row gap-3">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+              <Button className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02]">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md glass-panel border-white/20">
               <DialogHeader>
                 <DialogTitle>
                   Add New {activeTab === "paints" ? "Paint" : "Painting"}
@@ -545,7 +558,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, brand: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -558,7 +571,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, name: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -571,7 +584,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, size: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                       placeholder="e.g., 100ml"
                     />
                   </div>
@@ -585,7 +598,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, color: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -603,7 +616,7 @@ export function ProductsManager() {
                           unitPrice: parseFloat(e.target.value),
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -620,7 +633,7 @@ export function ProductsManager() {
                           stockLevel: parseInt(e.target.value),
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -637,7 +650,7 @@ export function ProductsManager() {
                         });
                       }}
                     >
-                      <SelectTrigger className="col-span-3">
+                      <SelectTrigger className="col-span-3 glass-input">
                         <SelectValue placeholder="Select supplier (optional)" />
                       </SelectTrigger>
                       <SelectContent>
@@ -665,7 +678,7 @@ export function ProductsManager() {
                           title: e.target.value,
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -681,7 +694,7 @@ export function ProductsManager() {
                           medium: e.target.value,
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                       placeholder="e.g., Oil on Canvas"
                     />
                   </div>
@@ -695,7 +708,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPainting({ ...newPainting, size: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                       placeholder="e.g., 24 x 36 inches"
                     />
                   </div>
@@ -713,7 +726,7 @@ export function ProductsManager() {
                           price: parseFloat(e.target.value),
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -729,7 +742,7 @@ export function ProductsManager() {
                           description: e.target.value,
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                 </div>
@@ -740,6 +753,7 @@ export function ProductsManager() {
                   onClick={
                     activeTab === "paints" ? handleAddPaint : handleAddPainting
                   }
+                  className="bg-primary text-white hover:bg-primary/90"
                 >
                   Add {activeTab === "paints" ? "Paint" : "Painting"}
                 </Button>
@@ -749,7 +763,7 @@ export function ProductsManager() {
 
           {/* Edit Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md glass-panel border-white/20">
               <DialogHeader>
                 <DialogTitle>
                   Edit {activeTab === "paints" ? "Paint" : "Painting"}
@@ -772,7 +786,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, brand: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -785,7 +799,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, name: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -798,7 +812,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, size: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -811,7 +825,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPaint({ ...newPaint, color: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -829,7 +843,7 @@ export function ProductsManager() {
                           unitPrice: parseFloat(e.target.value),
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -846,7 +860,7 @@ export function ProductsManager() {
                           stockLevel: parseInt(e.target.value),
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                 </div>
@@ -865,7 +879,7 @@ export function ProductsManager() {
                           title: e.target.value,
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -881,7 +895,7 @@ export function ProductsManager() {
                           medium: e.target.value,
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -894,7 +908,7 @@ export function ProductsManager() {
                       onChange={(e) =>
                         setNewPainting({ ...newPainting, size: e.target.value })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -911,7 +925,7 @@ export function ProductsManager() {
                           price: parseFloat(e.target.value),
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -927,7 +941,7 @@ export function ProductsManager() {
                           description: e.target.value,
                         })
                       }
-                      className="col-span-3"
+                      className="col-span-3 glass-input"
                     />
                   </div>
                 </div>
@@ -940,7 +954,7 @@ export function ProductsManager() {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleUpdateItem}>
+                <Button onClick={handleUpdateItem} className="bg-primary text-white">
                   Update {activeTab === "paints" ? "Paint" : "Painting"}
                 </Button>
               </DialogFooter>
@@ -950,7 +964,7 @@ export function ProductsManager() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6 backdrop-blur-sm border shadow-sm">
+      <div className="glass-card p-6 rounded-2xl animate-enter" style={{ animationDelay: '100ms' }}>
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -958,12 +972,15 @@ export function ProductsManager() {
               placeholder="Search products by name, brand, SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 focus:border-blue-500"
+              className="pl-10 glass-input border-0 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by category" />
+            <SelectTrigger className="w-full sm:w-48 glass-input border-0 bg-white/50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Filter by category" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
@@ -976,213 +993,203 @@ export function ProductsManager() {
             </SelectContent>
           </Select>
         </div>
-      </Card>
+      </div>
 
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        className="space-y-8"
+        className="space-y-8 animate-enter"
+        style={{ animationDelay: '200ms' }}
       >
-        <TabsList className="backdrop-blur-sm border shadow-sm">
+        <TabsList className="p-1 bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl border border-white/20">
           <TabsTrigger
             value="paints"
-            className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+            className="rounded-lg px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
           >
-            <Brush className="h-4 w-4" />
-            <span>Paints ({paints.length})</span>
+            <div className="flex items-center gap-2">
+              <Brush className="h-4 w-4" />
+              <span>Paints</span>
+              <Badge variant="secondary" className="ml-1 bg-primary/10 text-primary hover:bg-primary/20 border-0">
+                {paints.length}
+              </Badge>
+            </div>
           </TabsTrigger>
           <TabsTrigger
             value="paintings"
-            className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+            className="rounded-lg px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
           >
-            <Palette className="h-4 w-4" />
-            <span>Paintings ({paintings.length})</span>
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              <span>Paintings</span>
+              <Badge variant="secondary" className="ml-1 bg-primary/10 text-primary hover:bg-primary/20 border-0">
+                {paintings.length}
+              </Badge>
+            </div>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="paints" className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredPaints.map((paint) => (
-              <Card
+            {filteredPaints.map((paint, index) => (
+              <div
                 key={paint.id}
-                className={`${
-                  paint.stockLevel <= paint.minStockLevel
-                    ? "border-orange-500/50 bg-gradient-to-br from-orange-500/10 to-red-500/10"
-                    : "backdrop-blur-sm"
-                } hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}
+                className="group glass-card rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 animate-enter"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <CardHeader className="pb-4">
-                  <div className="flex justify-between items-start gap-2">
+                <div className="p-5 space-y-4">
+                  <div className="flex justify-between items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="text-lg truncate">
+                      <h3 className="font-bold text-lg truncate text-foreground group-hover:text-primary transition-colors">
                         {paint.name}
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        {paint.brand} - {paint.size}
-                      </CardDescription>
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {paint.brand} • {paint.size}
+                      </p>
                     </div>
-                    {paint.stockLevel <= paint.minStockLevel && (
-                      <Badge
-                        variant="destructive"
-                        className="flex items-center space-x-1 animate-pulse shrink-0"
-                      >
-                        <AlertTriangle className="h-3 w-3" />
-                        <span className="hidden sm:inline">Low</span>
-                      </Badge>
-                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEditPaint(paint)}>
+                          <Edit className="h-4 w-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                          onClick={() => handleDeleteProduct(paint.id, "paint")}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">SKU:</span>
-                    <span className="text-sm font-mono">{paint.sku}</span>
+
+                  <div className="space-y-2 pt-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Stock Level</span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "font-medium",
+                          paint.stockLevel <= paint.minStockLevel ? "text-orange-600 dark:text-orange-400" : "text-foreground"
+                        )}>
+                          {paint.stockLevel} units
+                        </span>
+                        {paint.stockLevel <= paint.minStockLevel && (
+                          <AlertTriangle className="h-4 w-4 text-orange-500 animate-pulse" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stock Progress Bar */}
+                    <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          paint.stockLevel <= paint.minStockLevel ? "bg-orange-500" : "bg-emerald-500"
+                        )}
+                        style={{ width: `${Math.min((paint.stockLevel / (paint.minStockLevel * 3)) * 100, 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm pt-1">
+                      <span className="text-muted-foreground">Price</span>
+                      <span className="font-bold text-lg text-primary">
+                        {formatCurrency(paint.unitPrice)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Color:
-                    </span>
-                    <Badge variant="outline">{paint.color}</Badge>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-200 border-0">
+                      {paint.color}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
+                      {paint.sku}
+                    </Badge>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Price:
-                    </span>
-                    <span className="font-semibold">
-                      {formatCurrency(paint.unitPrice)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Stock:
-                    </span>
-                    <span
-                      className={
-                        paint.stockLevel <= paint.minStockLevel
-                          ? "text-orange-600 font-semibold"
-                          : "text-green-600"
-                      }
-                    >
-                      {paint.stockLevel} units
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Supplier:
-                    </span>
-                    <span className="text-sm">{paint.supplier}</span>
-                  </div>
-                  <div className="flex space-x-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEditPaint(paint)}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
-                      onClick={() => handleDeleteProduct(paint.id, "paint")}
-                      disabled={deletingId === paint.id}
-                    >
-                      {deletingId === paint.id ? "Deleting…" : "Delete"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         </TabsContent>
 
         <TabsContent value="paintings" className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredPaintings.map((painting) => (
-              <Card
+            {filteredPaintings.map((painting, index) => (
+              <div
                 key={painting.id}
-                className="backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                className="group glass-card rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 animate-enter"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <CardHeader className="pb-4">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-lg truncate">
-                        {painting.title}
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        {painting.medium}
-                      </CardDescription>
-                    </div>
+                {/* Image Placeholder or Gradient */}
+                <div className="h-32 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1579783902614-a3fb39279c0f?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-10 group-hover:opacity-20 transition-opacity duration-500 mix-blend-overlay"></div>
+                  <div className="absolute top-3 right-3">
                     {getStatusBadge(painting.status)}
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Category:
-                    </span>
-                    <Badge variant="outline">{painting.category}</Badge>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-lg truncate text-foreground group-hover:text-primary transition-colors">
+                        {painting.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {painting.medium} • {painting.size}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEditPainting(painting)}>
+                          <Edit className="h-4 w-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                          onClick={() => handleDeleteProduct(painting.id, "painting")}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Size:</span>
-                    <span className="text-sm">{painting.size}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Price:
-                    </span>
-                    <span className="font-semibold">
-                      {formatCurrency(painting.price)}
-                    </span>
-                  </div>
-                  {painting.galleryLocation && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Location:
-                      </span>
-                      <span className="text-sm">
-                        {painting.galleryLocation}
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Category</span>
+                      <span className="font-medium">{painting.category}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Price</span>
+                      <span className="font-bold text-lg text-primary">
+                        {formatCurrency(painting.price)}
                       </span>
                     </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Created:
-                    </span>
-                    <span className="text-sm">
-                      {new Date(painting.dateCreated).toLocaleDateString()}
-                    </span>
                   </div>
+
                   {painting.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-xs text-muted-foreground line-clamp-2 h-8">
                       {painting.description}
                     </p>
                   )}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:border-blue-700"
-                      onClick={() => handleEditPainting(painting)}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      <span className="hidden sm:inline">Edit</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
-                      onClick={() =>
-                        handleDeleteProduct(painting.id, "painting")
-                      }
-                      disabled={deletingId === painting.id}
-                    >
-                      {deletingId === painting.id ? "Deleting…" : "Delete"}
-                    </Button>
+
+                  <div className="pt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Palette className="h-3 w-3" />
+                    <span>Added {new Date(painting.dateCreated).toLocaleDateString()}</span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         </TabsContent>

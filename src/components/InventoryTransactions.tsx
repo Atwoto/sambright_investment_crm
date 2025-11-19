@@ -45,7 +45,18 @@ import {
   CheckCircle,
   RotateCcw,
   Trash2,
+  Filter,
+  MoreHorizontal
 } from "lucide-react";
+import { cn } from "../lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 interface InventoryTransaction {
   id: string;
@@ -163,9 +174,6 @@ export function InventoryTransactions() {
         }));
 
         setTransactions(mappedTransactions);
-        console.log(
-          `Loaded ${mappedTransactions.length} inventory transactions from database`
-        );
       } catch (error) {
         console.error("Error loading inventory transactions:", error);
         toast.error("Failed to load inventory transactions");
@@ -295,6 +303,7 @@ export function InventoryTransactions() {
         setTransactions([transaction, ...transactions]);
         setNewTransaction({});
         setIsAddDialogOpen(false);
+        toast.success("Transaction added successfully");
       } catch (error) {
         console.error("Error adding transaction:", error);
         // Fallback to local state only if there's an error
@@ -321,6 +330,7 @@ export function InventoryTransactions() {
         setTransactions([transaction, ...transactions]);
         setNewTransaction({});
         setIsAddDialogOpen(false);
+        toast.success("Transaction added (offline mode)");
       }
     }
   };
@@ -387,10 +397,10 @@ export function InventoryTransactions() {
 
       // Update the local state
       setTransactions(transactions.filter((t) => t.id !== transactionId));
+      toast.success("Transaction deleted successfully");
     } catch (error) {
       console.error("Error deleting transaction:", error);
-      // Show error message to user
-      alert("Failed to delete transaction. Please try again.");
+      toast.error("Failed to delete transaction");
     }
   };
 
@@ -440,7 +450,7 @@ export function InventoryTransactions() {
   const getTransactionTypeIcon = (type: string) => {
     switch (type) {
       case "stock_in":
-        return <ArrowUp className="h-4 w-4 text-green-600" />;
+        return <ArrowUp className="h-4 w-4 text-emerald-600" />;
       case "stock_out":
         return <ArrowDown className="h-4 w-4 text-blue-600" />;
       case "adjustment":
@@ -459,44 +469,37 @@ export function InventoryTransactions() {
   const getTransactionTypeBadge = (type: string) => {
     const configs = {
       stock_in: {
-        variant: "default" as const,
-        className: "bg-green-100 text-green-800",
+        className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
         label: "Stock In",
       },
       stock_out: {
-        variant: "default" as const,
-        className: "bg-blue-100 text-blue-800",
+        className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
         label: "Stock Out",
       },
       adjustment: {
-        variant: "default" as const,
-        className: "bg-purple-100 text-purple-800",
+        className: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800",
         label: "Adjustment",
       },
       return: {
-        variant: "default" as const,
-        className: "bg-orange-100 text-orange-800",
+        className: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800",
         label: "Return",
       },
       damaged: {
-        variant: "destructive" as const,
-        className: "bg-red-100 text-red-800",
+        className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
         label: "Damaged",
       },
       lost: {
-        variant: "destructive" as const,
-        className: "bg-red-100 text-red-800",
+        className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
         label: "Lost",
       },
     };
 
     const config = configs[type as keyof typeof configs] || {
-      variant: "outline" as const,
       className: "",
       label: type,
     };
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant="outline" className={cn("border", config.className)}>
         {config.label}
       </Badge>
     );
@@ -506,10 +509,10 @@ export function InventoryTransactions() {
     const isPositive = ["stock_in", "return"].includes(transaction.type);
     const quantity = Math.abs(transaction.quantity);
     const sign = isPositive ? "+" : "-";
-    const colorClass = isPositive ? "text-green-600" : "text-red-600";
+    const colorClass = isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400";
 
     return (
-      <span className={`font-semibold ${colorClass}`}>
+      <span className={`font-bold ${colorClass}`}>
         {sign}
         {quantity}
       </span>
@@ -525,31 +528,11 @@ export function InventoryTransactions() {
     .filter((t) => ["stock_out", "damaged", "lost"].includes(t.type))
     .reduce((sum, t) => sum + Math.abs(t.quantity), 0);
 
-  // Calculate net inventory value based on transaction types
-  const totalValue = filteredTransactions
-    .filter((t) => t.totalCost)
-    .reduce((sum, t) => {
-      const cost = t.totalCost || 0;
-      // Add value for stock coming in
-      if (t.type === "stock_in" || t.type === "return") {
-        return sum + cost;
-      }
-      // Subtract value for stock going out or being lost
-      if (t.type === "stock_out" || t.type === "damaged" || t.type === "lost") {
-        return sum - cost;
-      }
-      // For adjustments, use the sign of the quantity
-      if (t.type === "adjustment") {
-        return t.quantity > 0 ? sum + cost : sum - cost;
-      }
-      return sum;
-    }, 0);
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 animate-enter">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">
             Inventory Transactions
           </h2>
           <p className="text-muted-foreground">
@@ -558,12 +541,12 @@ export function InventoryTransactions() {
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25 transition-all duration-300 hover:scale-[1.02]">
               <Plus className="h-4 w-4 mr-2" />
               Add Transaction
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md glass-panel border-white/20">
             <DialogHeader>
               <DialogTitle>Add Inventory Transaction</DialogTitle>
               <DialogDescription>
@@ -582,7 +565,7 @@ export function InventoryTransactions() {
                     setNewTransaction({ ...newTransaction, type: value as any })
                   }
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select transaction type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -611,7 +594,7 @@ export function InventoryTransactions() {
                     });
                   }}
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
@@ -636,7 +619,7 @@ export function InventoryTransactions() {
                       productName: e.target.value,
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Product name"
                 />
               </div>
@@ -653,7 +636,7 @@ export function InventoryTransactions() {
                     })
                   }
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Product type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -676,7 +659,7 @@ export function InventoryTransactions() {
                       quantity: parseInt(e.target.value),
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Quantity (positive number)"
                 />
               </div>
@@ -695,7 +678,7 @@ export function InventoryTransactions() {
                       unitCost: parseFloat(e.target.value),
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Optional"
                 />
               </div>
@@ -715,7 +698,7 @@ export function InventoryTransactions() {
                       });
                     }}
                   >
-                    <SelectTrigger className="col-span-3">
+                    <SelectTrigger className="col-span-3 glass-input">
                       <SelectValue placeholder="Select supplier (optional)" />
                     </SelectTrigger>
                     <SelectContent>
@@ -741,7 +724,7 @@ export function InventoryTransactions() {
                       reason: e.target.value,
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Reason for transaction"
                 />
               </div>
@@ -758,221 +741,177 @@ export function InventoryTransactions() {
                       notes: e.target.value,
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Additional notes..."
                 />
               </div>
             </div>
 
-            <DialogFooter>
-              <Button onClick={handleAddTransaction}>Add Transaction</Button>
+            <DialogFooter className="border-t border-white/10 pt-4">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddTransaction} className="bg-primary text-white">Add Transaction</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stock In</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+      <div className="grid gap-4 md:grid-cols-4 animate-enter" style={{ animationDelay: '100ms' }}>
+        <div className="glass-card p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingUp className="h-24 w-24 text-emerald-600 transform rotate-12" />
+          </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Stock In</h3>
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
+              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
               +{totalStockIn}
             </div>
-            <p className="text-xs text-muted-foreground">Units received</p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Units received</p>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stock Out</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+        <div className="glass-card p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingDown className="h-24 w-24 text-blue-600 transform -rotate-12" />
+          </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Stock Out</h3>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+              <TrendingDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
               -{totalStockOut}
             </div>
-            <p className="text-xs text-muted-foreground">Units removed</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Change</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${
-                totalStockIn - totalStockOut >= 0
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
-            >
-              {totalStockIn - totalStockOut >= 0 ? "+" : ""}
-              {totalStockIn - totalStockOut}
-            </div>
-            <p className="text-xs text-muted-foreground">Total change</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <CheckCircle className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalValue)}
-            </div>
-            <p className="text-xs text-muted-foreground">Transaction value</p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Units removed</p>
+          </div>
+        </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search transactions..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Filters */}
+      <div className="glass-card p-6 rounded-2xl animate-enter" style={{ animationDelay: '200ms' }}>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 glass-input border-0 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-full sm:w-48 glass-input border-0 bg-white/50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Filter Type" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="stock_in">Stock In</SelectItem>
+              <SelectItem value="stock_out">Stock Out</SelectItem>
+              <SelectItem value="adjustment">Adjustment</SelectItem>
+              <SelectItem value="return">Return</SelectItem>
+              <SelectItem value="damaged">Damaged</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+            <SelectTrigger className="w-full sm:w-48 glass-input border-0 bg-white/50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Date Range" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="7">Last 7 Days</SelectItem>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+              <SelectItem value="90">Last 90 Days</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={selectedType} onValueChange={setSelectedType}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="stock_in">Stock In</SelectItem>
-            <SelectItem value="stock_out">Stock Out</SelectItem>
-            <SelectItem value="adjustment">Adjustment</SelectItem>
-            <SelectItem value="return">Return</SelectItem>
-            <SelectItem value="damaged">Damaged</SelectItem>
-            <SelectItem value="lost">Lost</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by date" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Transactions List */}
-      <div className="space-y-4">
-        {filteredTransactions.map((transaction) => (
-          <Card
+      <div className="space-y-4 animate-enter" style={{ animationDelay: '300ms' }}>
+        {filteredTransactions.map((transaction, index) => (
+          <div
             key={transaction.id}
-            className="hover:shadow-md transition-shadow"
+            className="glass-card p-4 rounded-xl hover:shadow-md transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-enter"
+            style={{ animationDelay: `${index * 50}ms` }}
           >
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4">
-                  <div className="mt-1">
-                    {getTransactionTypeIcon(transaction.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold text-lg">
-                          {transaction.transactionNumber}
-                        </h3>
-                        {getTransactionTypeBadge(transaction.type)}
-                        <Badge variant="outline" className="text-xs">
-                          {transaction.productType}
-                        </Badge>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTransaction(transaction.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+            <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+              {getTransactionTypeIcon(transaction.type)}
+            </div>
 
-                    <div className="text-foreground font-medium mb-1">
-                      {transaction.productName}
-                    </div>
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {transaction.reason}
-                    </div>
+            <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
+              <div className="sm:col-span-1">
+                <div className="font-medium text-foreground truncate">{transaction.productName}</div>
+                <div className="text-xs text-muted-foreground">{transaction.transactionNumber}</div>
+              </div>
 
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {new Date(
-                            transaction.dateCreated
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <User className="h-3 w-3" />
-                        <span>{transaction.createdBy}</span>
-                      </div>
-                      {transaction.supplierName && (
-                        <div>From: {transaction.supplierName}</div>
-                      )}
-                      {transaction.clientName && (
-                        <div>To: {transaction.clientName}</div>
-                      )}
-                    </div>
+              <div className="sm:col-span-1 flex items-center">
+                {getTransactionTypeBadge(transaction.type)}
+              </div>
 
-                    {transaction.notes && (
-                      <p className="text-sm text-muted-foreground bg-muted p-2 rounded mt-2">
-                        {transaction.notes}
-                      </p>
-                    )}
-                  </div>
+              <div className="sm:col-span-1 flex flex-col justify-center">
+                <div className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(transaction.dateCreated).toLocaleDateString()}
                 </div>
-
-                <div className="text-right">
-                  <div className="text-xl font-bold mb-1">
-                    {getQuantityDisplay(transaction)}
-                  </div>
-                  {transaction.totalCost && (
-                    <div className="text-sm text-muted-foreground">
-                      {formatCurrency(transaction.totalCost)}
-                    </div>
-                  )}
-                  {transaction.unitCost && (
-                    <div className="text-xs text-muted-foreground">
-                      {formatCurrency(transaction.unitCost)}/unit
-                    </div>
-                  )}
+                <div className="text-xs text-muted-foreground truncate">
+                  {transaction.reason || "No reason provided"}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="sm:col-span-1 flex items-center justify-between sm:justify-end gap-4">
+                <div className="text-right">
+                  <div className="text-lg">{getQuantityDisplay(transaction)}</div>
+                  {transaction.unitCost && (
+                    <div className="text-xs text-muted-foreground">
+                      {formatCurrency(transaction.unitCost)} / unit
+                    </div>
+                  )}
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                      onClick={() => handleDeleteTransaction(transaction.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Delete Transaction
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
         ))}
 
         {filteredTransactions.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                No transactions found matching your criteria.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="glass-card p-12 text-center rounded-xl">
+            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Package className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground">No transactions found</h3>
+            <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+              Try adjusting your filters or add a new transaction to get started.
+            </p>
+          </div>
         )}
       </div>
     </div>

@@ -1,28 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../utils/supabase/client";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Progress } from "./ui/progress";
-import { Button } from "./ui/button";
-import { formatCurrency } from "../utils/currency";
-import {
-  Package,
+  TrendingUp,
   Users,
   ShoppingCart,
-  DollarSign,
   AlertTriangle,
-  TrendingUp,
+  Package,
+  ArrowUpRight,
+  Activity,
+  DollarSign,
+  Zap,
   Palette,
   Brush,
   Eye,
-  RefreshCw,
+  BarChart3
 } from "lucide-react";
+import { formatCurrency } from "../utils/currency";
+import { cn } from "../lib/utils";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Progress } from "./ui/progress";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 
 interface DashboardStats {
   totalProducts: number;
@@ -39,6 +46,17 @@ interface DashboardStats {
     timestamp: string;
   }>;
 }
+
+// Mock data for the chart - in a real app this would come from the database
+const chartData = [
+  { name: "Jan", revenue: 4000 },
+  { name: "Feb", revenue: 3000 },
+  { name: "Mar", revenue: 2000 },
+  { name: "Apr", revenue: 2780 },
+  { name: "May", revenue: 1890 },
+  { name: "Jun", revenue: 2390 },
+  { name: "Jul", revenue: 3490 },
+];
 
 export function DashboardOverview() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -59,175 +77,106 @@ export function DashboardOverview() {
       setLoading(true);
 
       // Fetch products count
-      const { count: productsCount, error: productsError } = await supabase
+      const { count: productsCount } = await supabase
         .from("products")
         .select("*", { count: "exact", head: true });
 
-      if (productsError) throw productsError;
-
       // Fetch clients count
-      const { count: clientsCount, error: clientsError } = await supabase
+      const { count: clientsCount } = await supabase
         .from("clients")
         .select("*", { count: "exact", head: true });
 
-      if (clientsError) throw clientsError;
-
       // Fetch orders count
-      const { count: ordersCount, error: ordersError } = await supabase
+      const { count: ordersCount } = await supabase
         .from("orders")
         .select("*", { count: "exact", head: true });
 
-      if (ordersError) throw ordersError;
-
       // Fetch paintings count
-      const { count: paintingsCount, error: paintingsError } = await supabase
+      const { count: paintingsCount } = await supabase
         .from("products")
         .select("*", { count: "exact", head: true })
         .eq("product_type", "painting");
 
-      if (paintingsError) throw paintingsError;
-
       // Fetch paints count
-      const { count: paintsCount, error: paintsError } = await supabase
+      const { count: paintsCount } = await supabase
         .from("products")
         .select("*", { count: "exact", head: true })
         .eq("product_type", "paint");
 
-      if (paintsError) throw paintsError;
-
-      // Fetch low stock items (products with stock_level < min_stock_level)
-      const { data: allProducts, error: lowStockError } = await supabase
+      // Fetch low stock items
+      const { data: allProducts } = await supabase
         .from("products")
         .select("id, stock_level, min_stock_level");
 
       const lowStockItems =
-        allProducts
-          ?.filter((item) => item.stock_level < item.min_stock_level)
-          .slice(0, 10) || [];
+        allProducts?.filter((item) => item.stock_level < item.min_stock_level) || [];
 
-      if (lowStockError) throw lowStockError;
-
-      // For revenue, we'll need to calculate from orders
-      // This is a simplified calculation - you might want to adjust based on your business logic
-      const { data: ordersData, error: ordersDataError } = await supabase
+      // Calculate Revenue (Simplified)
+      const { data: ordersData } = await supabase
         .from("orders")
         .select("total")
         .gte(
           "created_at",
-          new Date(
-            new Date().getFullYear(),
-            new Date().getMonth(),
-            1
-          ).toISOString()
+          new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
         );
 
-      if (ordersDataError) throw ordersDataError;
-
-      const monthlyRevenue = ordersData.reduce(
+      const monthlyRevenue = ordersData?.reduce(
         (sum, order) => sum + (order.total || 0),
         0
-      );
+      ) || 0;
 
-      // Fetch recent inventory transactions for activity feed
-      const { data: recentTransactions, error: transactionsError } =
-        await supabase
-          .from("inventory_transactions")
-          .select("*, product:products(name, product_type)")
-          .order("created_at", { ascending: false })
-          .limit(5);
+      // Fetch recent activity
+      const { data: recentTransactions } = await supabase
+        .from("inventory_transactions")
+        .select("*, product:products(name, product_type)")
+        .order("created_at", { ascending: false })
+        .limit(5);
 
-      if (transactionsError) throw transactionsError;
-
-      // Convert transactions to activity feed items
-      const recentActivity = recentTransactions.map((transaction) => {
+      const recentActivity = (recentTransactions || []).map((transaction) => {
         let message = "";
         let type: "sale" | "restock" | "new_client" | "low_stock" = "restock";
 
         switch (transaction.type) {
           case "stock_in":
-            message = `Stocked in ${transaction.quantity} units of ${
-              transaction.product?.name || transaction.product_name
-            }`;
+            message = `Stocked in ${transaction.quantity} units of ${transaction.product?.name}`;
             type = "restock";
             break;
           case "stock_out":
-            message = `Sold ${transaction.quantity} units of ${
-              transaction.product?.name || transaction.product_name
-            }`;
+            message = `Sold ${transaction.quantity} units of ${transaction.product?.name}`;
             type = "sale";
             break;
           case "damaged":
-            message = `${transaction.quantity} units of ${
-              transaction.product?.name || transaction.product_name
-            } marked as damaged`;
+            message = `${transaction.quantity} units of ${transaction.product?.name} marked damaged`;
             type = "low_stock";
             break;
-          case "adjustment":
-            message = `Inventory adjusted for ${
-              transaction.product?.name || transaction.product_name
-            } (${transaction.quantity > 0 ? "+" : ""}${transaction.quantity})`;
-            type = "restock";
-            break;
           default:
-            message = `${transaction.type} transaction for ${
-              transaction.product?.name || transaction.product_name
-            }`;
-            type = "restock";
+            message = `${transaction.type} for ${transaction.product?.name}`;
         }
 
         // Calculate time ago
-        const createdAt = new Date(transaction.created_at);
-        const now = new Date();
-        const diffMs = now.getTime() - createdAt.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffMs = new Date().getTime() - new Date(transaction.created_at).getTime();
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const timestamp = diffHours > 24
+          ? `${Math.floor(diffHours / 24)} days ago`
+          : `${diffHours} hours ago`;
 
-        let timestamp = "";
-        if (diffDays > 0) {
-          timestamp = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-        } else if (diffHours > 0) {
-          timestamp = `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-        } else {
-          timestamp = `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
-        }
-
-        return {
-          id: transaction.id,
-          type,
-          message,
-          timestamp,
-        };
+        return { id: transaction.id, type, message, timestamp };
       });
 
-      // Set the dashboard stats
       setStats({
         totalProducts: productsCount || 0,
         totalClients: clientsCount || 0,
         pendingOrders: ordersCount || 0,
-        monthlyRevenue: monthlyRevenue,
-        lowStockItems: lowStockItems?.length || 0,
+        monthlyRevenue,
+        lowStockItems: lowStockItems.length,
         paintingsAvailable: paintingsCount || 0,
         paintsInStock: paintsCount || 0,
-        recentActivity: recentActivity,
+        recentActivity,
       });
-
-      setLoading(false);
-    } catch (error: any) {
-      console.error("Error loading dashboard data:", error);
-      const errorMsg = error?.message || "Unknown error";
-      alert(
-        `Failed to load dashboard data: ${errorMsg}\n\nPlease check your database connection.`
-      );
-      setLoading(false);
-    }
-  };
-
-  const refreshDashboard = async () => {
-    try {
-      await loadDashboardData();
     } catch (error) {
-      console.error("Error refreshing dashboard:", error);
+      console.error("Error loading dashboard:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -253,197 +202,260 @@ export function DashboardOverview() {
   if (loading) {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(8)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="space-y-0 pb-2">
-              <div className="h-4 bg-muted rounded w-20"></div>
-              <div className="h-8 bg-muted rounded w-16"></div>
-            </CardHeader>
-          </Card>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-32 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-enter">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">
-            Dashboard Overview
-          </h2>
-          <p className="text-muted-foreground">
-            Welcome back! Here's what's happening in your painting business.
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
+          <p className="text-muted-foreground mt-1">Overview of your business performance.</p>
         </div>
-        <Button
-          onClick={refreshDashboard}
-          variant="outline"
-          size="sm"
-          disabled={loading}
-        >
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
-          />
-          {loading ? "Refreshing..." : "Refresh Data"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={loadDashboardData}
+            className="bg-primary text-white shadow-lg shadow-primary/25 gap-2"
+          >
+            <Activity className="h-4 w-4" /> Refresh Data
+          </Button>
+        </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(stats.monthlyRevenue)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              This month's revenue
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Clients
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalClients}</div>
-            <p className="text-xs text-muted-foreground">
-              Total clients in database
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Orders
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              Total orders in database
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Low Stock Alerts
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {stats.lowStockItems}
-            </div>
-            <p className="text-xs text-muted-foreground">Requires attention</p>
-          </CardContent>
-        </Card>
+      {/* Metric Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Total Revenue"
+          value={formatCurrency(stats.monthlyRevenue)}
+          trend="+12.5% from last month"
+          icon={DollarSign}
+          gradient="from-emerald-500 to-teal-500"
+          delay={0}
+        />
+        <MetricCard
+          title="Active Clients"
+          value={stats.totalClients.toString()}
+          trend="+4 new this week"
+          icon={Users}
+          gradient="from-blue-500 to-indigo-500"
+          delay={100}
+        />
+        <MetricCard
+          title="Pending Orders"
+          value={stats.pendingOrders.toString()}
+          trend="Requires attention"
+          icon={ShoppingCart}
+          gradient="from-violet-500 to-purple-500"
+          delay={200}
+        />
+        <MetricCard
+          title="Low Stock Items"
+          value={stats.lowStockItems.toString()}
+          trend="Restock needed"
+          icon={AlertTriangle}
+          gradient="from-orange-500 to-red-500"
+          delay={300}
+          alert={stats.lowStockItems > 0}
+        />
       </div>
 
-      {/* Inventory Overview */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Palette className="h-5 w-5 text-purple-600" />
-              <span>Paintings Inventory</span>
-            </CardTitle>
-            <CardDescription>Your artwork collection status</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Available for Sale</span>
-              <Badge variant="secondary">{stats.paintingsAvailable}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Total Paintings</span>
-              <Badge variant="default">{stats.paintingsAvailable}</Badge>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Main Content Grid */}
+      <div className="grid gap-6 md:grid-cols-7">
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Brush className="h-5 w-5 text-blue-600" />
-              <span>Paint Supplies</span>
-            </CardTitle>
-            <CardDescription>Your painting materials inventory</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Total SKUs</span>
-              <Badge variant="secondary">{stats.paintsInStock}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Well Stocked</span>
-              <Badge variant="default">
-                {stats.paintsInStock - stats.lowStockItems}
-              </Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Low Stock</span>
-              <Badge variant="destructive">{stats.lowStockItems}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Left Column - Charts & Inventory (4 cols) */}
+        <div className="md:col-span-4 space-y-6 animate-enter" style={{ animationDelay: '400ms' }}>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Recent Activity</span>
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
-              View All
-            </Button>
-          </CardTitle>
-          <CardDescription>Latest updates in your business</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {stats.recentActivity.length > 0 ? (
-            <div className="space-y-4">
-              {stats.recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start space-x-3 pb-3 border-b border-border last:border-0"
-                >
-                  <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground">
-                      {activity.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {activity.timestamp}
-                    </p>
-                  </div>
+          {/* Revenue Chart */}
+          <Card className="glass-card border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Revenue Analytics
+              </CardTitle>
+              <CardDescription>Monthly revenue performance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '12px',
+                        border: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorRevenue)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="glass-card p-4 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 cursor-pointer group transition-all hover:-translate-y-1">
+              <div className="p-3 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                <Package className="h-6 w-6" />
+              </div>
+              <span className="font-medium text-sm">Add Product</span>
+            </div>
+            <div className="glass-card p-4 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 cursor-pointer group transition-all hover:-translate-y-1">
+              <div className="p-3 rounded-full bg-secondary/10 text-secondary group-hover:scale-110 transition-transform">
+                <Users className="h-6 w-6" />
+              </div>
+              <span className="font-medium text-sm">Add Client</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Inventory & Activity (3 cols) */}
+        <div className="md:col-span-3 space-y-6 animate-enter" style={{ animationDelay: '500ms' }}>
+
+          {/* Inventory Status */}
+          <div className="glass-card p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold text-lg">Inventory Status</h3>
+              <Package className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            <div className="space-y-6">
+              {/* Paintings */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <Palette className="h-4 w-4" /> Paintings
+                  </span>
+                  <span className="font-medium">{stats.paintingsAvailable} Available</span>
                 </div>
-              ))}
+                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full"
+                    style={{ width: '75%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Paints */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <Brush className="h-4 w-4" /> Paint Supplies
+                  </span>
+                  <span className="font-medium">{stats.paintsInStock} Units</span>
+                </div>
+                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                    style={{ width: '60%' }}
+                  />
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-sm">No recent activity</p>
-              <p className="text-xs mt-1">
-                Activity will appear here as you use the system
-              </p>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="glass-card h-full p-6 rounded-2xl flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold text-lg">Recent Activity</h3>
+              <Activity className="h-5 w-5 text-muted-foreground" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            <div className="space-y-6 flex-1">
+              {stats.recentActivity.length > 0 ? (
+                stats.recentActivity.map((activity, i) => (
+                  <div key={activity.id} className="flex gap-4 relative">
+                    {i !== stats.recentActivity.length - 1 && (
+                      <div className="absolute left-2.5 top-8 bottom-[-24px] w-px bg-border" />
+                    )}
+                    <div className={`
+                      mt-1 h-5 w-5 rounded-full border-2 flex-shrink-0 z-10 bg-background
+                      ${activity.type === 'sale' ? 'border-green-500' :
+                        activity.type === 'low_stock' ? 'border-red-500' : 'border-blue-500'}
+                    `} />
+                    <div>
+                      <p className="text-sm font-medium leading-none">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{activity.timestamp}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground py-8">No recent activity</div>
+              )}
+            </div>
+
+            <button className="w-full mt-6 py-2 text-sm text-primary hover:text-primary/80 font-medium flex items-center justify-center gap-2">
+              View All Activity <ArrowUpRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ title, value, trend, icon: Icon, gradient, delay, alert }: any) {
+  return (
+    <div
+      className={cn(
+        "glass-card p-6 rounded-2xl relative overflow-hidden group animate-enter",
+        alert && "border-red-500/50 shadow-red-500/10"
+      )}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className={`absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity bg-gradient-to-br ${gradient} rounded-bl-2xl`}>
+        <Icon className="h-12 w-12 text-white" />
+      </div>
+
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+          <Icon className="h-4 w-4" />
+          <span className="text-sm font-medium">{title}</span>
+        </div>
+        <div className="text-3xl font-bold tracking-tight mb-1">{value}</div>
+        <div className={cn(
+          "text-xs font-medium flex items-center gap-1",
+          alert ? "text-red-500" : "text-emerald-500"
+        )}>
+          {alert ? <AlertTriangle className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
+          {trend}
+        </div>
+      </div>
     </div>
   );
 }

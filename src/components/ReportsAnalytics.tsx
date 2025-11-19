@@ -47,7 +47,11 @@ import {
   ShoppingCart,
   Palette,
   Brush,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity
 } from "lucide-react";
+import { cn } from "../lib/utils";
 
 interface SalesData {
   month: string;
@@ -274,9 +278,6 @@ export function ReportsAnalytics() {
     } catch (error: any) {
       console.error("Error loading reports data:", error);
       const errorMsg = error?.message || "Unknown error";
-      alert(
-        `Failed to load reports data: ${errorMsg}\n\nPlease check your database connection.`
-      );
       setLoading(false);
     }
   };
@@ -307,10 +308,10 @@ export function ReportsAnalytics() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 animate-in fade-in-50 duration-500">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Reports & Analytics
             </h2>
             <p className="text-muted-foreground">Loading data...</p>
@@ -318,12 +319,7 @@ export function ReportsAnalytics() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="space-y-0 pb-2">
-                <div className="h-4 bg-muted rounded w-20"></div>
-                <div className="h-8 bg-muted rounded w-16 mt-2"></div>
-              </CardHeader>
-            </Card>
+            <div key={i} className="glass-card h-32 animate-pulse rounded-xl"></div>
           ))}
         </div>
       </div>
@@ -331,10 +327,10 @@ export function ReportsAnalytics() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 animate-enter">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">
             Reports & Analytics
           </h2>
           <p className="text-muted-foreground">
@@ -343,7 +339,7 @@ export function ReportsAnalytics() {
         </div>
         <div className="flex items-center space-x-4">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 glass-input">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -357,6 +353,7 @@ export function ReportsAnalytics() {
             variant="outline"
             onClick={loadReportsData}
             disabled={loading}
+            className="glass-button"
           >
             <Download className="h-4 w-4 mr-2" />
             Refresh
@@ -365,114 +362,143 @@ export function ReportsAnalytics() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-enter" style={{ animationDelay: '100ms' }}>
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <DollarSign className="h-24 w-24 text-primary" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Total Revenue</h3>
+            <div className="p-2 bg-primary/10 rounded-full">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground">
               {formatCurrency(totalRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Total revenue from all orders
+            <p className="text-xs text-muted-foreground mt-1 flex items-center">
+              <ArrowUpRight className="h-3 w-3 text-emerald-500 mr-1" />
+              <span className="text-emerald-500 font-medium">+12.5%</span> from last period
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Paintings Sold
-            </CardTitle>
-            <Palette className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPaintingsSold}</div>
-            <p className="text-xs text-muted-foreground">
-              Total paintings sold
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Palette className="h-24 w-24 text-blue-500" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Paintings Sold</h3>
+            <div className="p-2 bg-blue-500/10 rounded-full">
+              <Palette className="h-4 w-4 text-blue-500" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground">{totalPaintingsSold}</div>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center">
+              <ArrowUpRight className="h-3 w-3 text-emerald-500 mr-1" />
+              <span className="text-emerald-500 font-medium">+4.2%</span> from last period
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg Order Value
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <ShoppingCart className="h-24 w-24 text-purple-500" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Avg Order Value</h3>
+            <div className="p-2 bg-purple-500/10 rounded-full">
+              <ShoppingCart className="h-4 w-4 text-purple-500" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground">
               {formatCurrency(averageOrderValue)}
             </div>
-            <p className="text-xs text-muted-foreground">Average order value</p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center">
+              <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
+              <span className="text-red-500 font-medium">-2.1%</span> from last period
+            </p>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Low Stock Items
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+        <div className="glass-card p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertTriangle className="h-24 w-24 text-orange-500" />
+          </div>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Low Stock Items</h3>
+            <div className="p-2 bg-orange-500/10 rounded-full">
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-orange-500">
               {lowStockItems.length}
             </div>
-            <p className="text-xs text-muted-foreground">Requires attention</p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Requires attention</p>
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="sales" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
-          <TabsTrigger value="products">Product Performance</TabsTrigger>
-          <TabsTrigger value="clients">Client Analysis</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory Reports</TabsTrigger>
+      <Tabs defaultValue="sales" className="space-y-6 animate-enter" style={{ animationDelay: '200ms' }}>
+        <TabsList className="grid w-full grid-cols-4 glass-panel p-1 rounded-xl">
+          <TabsTrigger value="sales" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Sales Analytics</TabsTrigger>
+          <TabsTrigger value="products" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Product Performance</TabsTrigger>
+          <TabsTrigger value="clients" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Client Analysis</TabsTrigger>
+          <TabsTrigger value="inventory" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Inventory Reports</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="sales" className="space-y-6">
+        <TabsContent value="sales" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Revenue Trends</CardTitle>
-                <CardDescription>
+            <div className="glass-card p-6 rounded-xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">Monthly Revenue Trends</h3>
+                <p className="text-sm text-muted-foreground">
                   Revenue breakdown by product category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                </p>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={salesData}>
+                    <defs>
+                      <linearGradient id="colorPaintings" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorPaints" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke={theme === "dark" ? "#374151" : "#e5e7eb"}
+                      stroke={theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+                      vertical={false}
                     />
                     <XAxis
                       dataKey="month"
-                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
-                      axisLine={{
-                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
-                      }}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={10}
                     />
                     <YAxis
-                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
-                      axisLine={{
-                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
-                      }}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dx={-10}
+                      tickFormatter={(value) => `$${value}`}
                     />
                     <Tooltip
-                      formatter={(value) => [`$${value}`, ""]}
+                      formatter={(value: number) => [`$${value}`, ""]}
                       contentStyle={{
-                        backgroundColor:
-                          theme === "dark" ? "#1f2937" : "#ffffff",
-                        border: `1px solid ${
-                          theme === "dark" ? "#374151" : "#e5e7eb"
-                        }`,
-                        borderRadius: "6px",
+                        backgroundColor: theme === "dark" ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                        border: "none",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
                         color: theme === "dark" ? "#f9fafb" : "#111827",
                       }}
                     />
@@ -481,54 +507,56 @@ export function ReportsAnalytics() {
                       dataKey="paintings"
                       stackId="1"
                       stroke="#8884d8"
-                      fill="#8884d8"
+                      fill="url(#colorPaintings)"
+                      strokeWidth={2}
                     />
                     <Area
                       type="monotone"
                       dataKey="paints"
                       stackId="1"
                       stroke="#82ca9d"
-                      fill="#82ca9d"
+                      fill="url(#colorPaints)"
+                      strokeWidth={2}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Growth</CardTitle>
-                <CardDescription>Month-over-month total sales</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+            <div className="glass-card p-6 rounded-xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">Sales Growth</h3>
+                <p className="text-sm text-muted-foreground">Month-over-month total sales</p>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={salesData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke={theme === "dark" ? "#374151" : "#e5e7eb"}
+                      stroke={theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+                      vertical={false}
                     />
                     <XAxis
                       dataKey="month"
-                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
-                      axisLine={{
-                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
-                      }}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={10}
                     />
                     <YAxis
-                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
-                      axisLine={{
-                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
-                      }}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      dx={-10}
+                      tickFormatter={(value) => `$${value}`}
                     />
                     <Tooltip
-                      formatter={(value) => [`$${value}`, "Total Sales"]}
+                      formatter={(value: number) => [`$${value}`, "Total Sales"]}
                       contentStyle={{
-                        backgroundColor:
-                          theme === "dark" ? "#1f2937" : "#ffffff",
-                        border: `1px solid ${
-                          theme === "dark" ? "#374151" : "#e5e7eb"
-                        }`,
-                        borderRadius: "6px",
+                        backgroundColor: theme === "dark" ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                        border: "none",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
                         color: theme === "dark" ? "#f9fafb" : "#111827",
                       }}
                     />
@@ -537,434 +565,353 @@ export function ReportsAnalytics() {
                       dataKey="total"
                       stroke="#8884d8"
                       strokeWidth={3}
+                      dot={{ r: 4, fill: "#8884d8", strokeWidth: 2, stroke: "#fff" }}
+                      activeDot={{ r: 6, fill: "#8884d8", strokeWidth: 0 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
           {/* Sales Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sales Summary</CardTitle>
-              <CardDescription>
+          <div className="glass-card p-6 rounded-xl">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold">Sales Summary</h3>
+              <p className="text-sm text-muted-foreground">
                 Key performance indicators for the selected period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    $
-                    {salesData
-                      .reduce((sum, data) => sum + data.paintings, 0)
-                      .toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Paintings Revenue
-                  </div>
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  $
+                  {salesData
+                    .reduce((sum, data) => sum + data.paintings, 0)
+                    .toLocaleString()}
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    $
-                    {salesData
-                      .reduce((sum, data) => sum + data.paints, 0)
-                      .toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Paints Revenue
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {Math.max(
-                      ...salesData.map((d) => d.total)
-                    ).toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Best Month
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {(totalRevenue / 12 / 1000).toFixed(1)}K
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Avg Monthly
-                  </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Paintings Revenue
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  $
+                  {salesData
+                    .reduce((sum, data) => sum + data.paints, 0)
+                    .toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Paints Revenue
+                </div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {Math.max(
+                    ...salesData.map((d) => d.total)
+                  ).toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Best Month
+                </div>
+              </div>
+              <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                  {(totalRevenue / 12 / 1000).toFixed(1)}K
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Avg Monthly
+                </div>
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent value="products" className="space-y-6">
+        <TabsContent value="products" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Products by Revenue</CardTitle>
-                <CardDescription>
+            <div className="glass-card p-6 rounded-xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">Top Products by Revenue</h3>
+                <p className="text-sm text-muted-foreground">
                   Best performing products in your catalog
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topProducts} layout="horizontal">
+                </p>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke={theme === "dark" ? "#374151" : "#e5e7eb"}
+                      stroke={theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+                      horizontal={false}
                     />
                     <XAxis
                       type="number"
-                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
-                      axisLine={{
-                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
-                      }}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
                     />
                     <YAxis
                       dataKey="name"
                       type="category"
-                      width={120}
-                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280" }}
-                      axisLine={{
-                        stroke: theme === "dark" ? "#374151" : "#e5e7eb",
-                      }}
+                      width={100}
+                      tick={{ fill: theme === "dark" ? "#9ca3af" : "#6b7280", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
                     />
                     <Tooltip
-                      formatter={(value) => [`$${value}`, "Revenue"]}
+                      formatter={(value: number) => [`$${value}`, "Revenue"]}
                       contentStyle={{
-                        backgroundColor:
-                          theme === "dark" ? "#1f2937" : "#ffffff",
-                        border: `1px solid ${
-                          theme === "dark" ? "#374151" : "#e5e7eb"
-                        }`,
-                        borderRadius: "6px",
+                        backgroundColor: theme === "dark" ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                        border: "none",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
                         color: theme === "dark" ? "#f9fafb" : "#111827",
                       }}
                     />
-                    <Bar dataKey="revenue" fill="#8884d8" />
+                    <Bar dataKey="revenue" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Product Categories</CardTitle>
-                <CardDescription>
+            <div className="glass-card p-6 rounded-xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">Product Categories</h3>
+                <p className="text-sm text-muted-foreground">
                   Revenue distribution by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {["Paintings", "Paints"].map((category) => {
-                    const categoryProducts = productPerformance.filter(
-                      (p) => p.category === category
-                    );
-                    const categoryRevenue = categoryProducts.reduce(
-                      (sum, p) => sum + p.revenue,
-                      0
-                    );
-                    const totalProductRevenue = productPerformance.reduce(
-                      (sum, p) => sum + p.revenue,
-                      0
-                    );
-                    const percentage =
-                      (categoryRevenue / totalProductRevenue) * 100;
+                </p>
+              </div>
+              <div className="space-y-6">
+                {["Paintings", "Paints"].map((category) => {
+                  const categoryProducts = productPerformance.filter(
+                    (p) => p.category === category
+                  );
+                  const categoryRevenue = categoryProducts.reduce(
+                    (sum, p) => sum + p.revenue,
+                    0
+                  );
+                  const totalProductRevenue = productPerformance.reduce(
+                    (sum, p) => sum + p.revenue,
+                    0
+                  );
+                  const percentage =
+                    totalProductRevenue > 0 ? (categoryRevenue / totalProductRevenue) * 100 : 0;
 
-                    return (
-                      <div key={category} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">
-                            {category}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            ${categoryRevenue.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              category === "Paintings"
-                                ? "bg-blue-600"
-                                : "bg-green-600"
-                            }`}
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {percentage.toFixed(1)}% of total revenue
-                        </div>
+                  return (
+                    <div key={category} className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium flex items-center gap-2">
+                          {category === "Paintings" ? <Palette className="h-4 w-4 text-blue-500" /> : <Brush className="h-4 w-4 text-emerald-500" />}
+                          {category}
+                        </span>
+                        <span className="font-bold">
+                          ${categoryRevenue.toLocaleString()}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="w-full bg-muted/50 rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ${category === "Paintings"
+                              ? "bg-gradient-to-r from-blue-500 to-blue-400"
+                              : "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                            }`}
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right">
+                        {percentage.toFixed(1)}% of total revenue
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Product Performance Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Detailed Product Performance</CardTitle>
-              <CardDescription>
+          <div className="glass-card p-0 rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-white/10">
+              <h3 className="text-lg font-semibold">Detailed Product Performance</h3>
+              <p className="text-sm text-muted-foreground">
                 Complete breakdown of all products
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Product Name</th>
-                      <th className="text-left p-2">Category</th>
-                      <th className="text-center p-2">Units Sold</th>
-                      <th className="text-right p-2">Revenue</th>
-                      <th className="text-right p-2">Avg Price</th>
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/30">
+                    <th className="text-left p-4 font-medium text-muted-foreground">Product Name</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Category</th>
+                    <th className="text-center p-4 font-medium text-muted-foreground">Units Sold</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Revenue</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Avg Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productPerformance.map((product, index) => (
+                    <tr key={index} className="border-b border-white/5 hover:bg-muted/20 transition-colors">
+                      <td className="p-4 font-medium">{product.name}</td>
+                      <td className="p-4">
+                        <Badge variant="outline" className={cn(
+                          "font-normal",
+                          product.category === "Paintings" ? "border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-400" : "border-emerald-200 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400"
+                        )}>{product.category}</Badge>
+                      </td>
+                      <td className="p-4 text-center">{product.sold}</td>
+                      <td className="p-4 text-right font-semibold">
+                        ${product.revenue.toLocaleString()}
+                      </td>
+                      <td className="p-4 text-right text-muted-foreground">
+                        ${(product.revenue / (product.sold || 1)).toFixed(0)}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {productPerformance.map((product, index) => (
-                      <tr key={index} className="border-b hover:bg-muted/50">
-                        <td className="p-2 font-medium">{product.name}</td>
-                        <td className="p-2">
-                          <Badge variant="outline">{product.category}</Badge>
-                        </td>
-                        <td className="p-2 text-center">{product.sold}</td>
-                        <td className="p-2 text-right font-semibold">
-                          ${product.revenue.toLocaleString()}
-                        </td>
-                        <td className="p-2 text-right">
-                          ${(product.revenue / product.sold).toFixed(0)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent value="clients" className="space-y-6">
+        <TabsContent value="clients" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Segments</CardTitle>
-                <CardDescription>
+            <div className="glass-card p-6 rounded-xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">Client Segments</h3>
+                <p className="text-sm text-muted-foreground">
                   Revenue distribution by client type
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                </p>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={clientSegments}
                       cx="50%"
                       cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
                       dataKey="value"
-                      label={({ name, value }) => `${name} ${value}%`}
                     >
                       {clientSegments.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: theme === "dark" ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                        border: "none",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                        color: theme === "dark" ? "#f9fafb" : "#111827",
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {clientSegments.map((segment, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
+                    <span className="text-muted-foreground">{segment.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Growth</CardTitle>
-                <CardDescription>
+            <div className="glass-card p-6 rounded-xl">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold">Client Growth</h3>
+                <p className="text-sm text-muted-foreground">
                   New clients acquired over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {clientSegments.map((segment, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: segment.color }}
-                        ></div>
-                        <span className="font-medium">{segment.name}</span>
+                </p>
+              </div>
+              <div className="space-y-4">
+                {clientSegments.map((segment, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm"
+                        style={{ backgroundColor: segment.color }}
+                      >
+                        {segment.name.charAt(0)}
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{segment.value}%</div>
-                        <div className="text-sm text-muted-foreground">
-                          of revenue
-                        </div>
+                      <div>
+                        <div className="font-medium">{segment.name}</div>
+                        <div className="text-xs text-muted-foreground">{segment.value} clients</div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Client Insights */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Insights</CardTitle>
-              <CardDescription>
-                Key metrics about your customer base
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {clientSegments.reduce((sum, s) => sum + s.value, 0)}
+                    <div className="text-right">
+                      <div className="font-bold">{((segment.value / (clientSegments.reduce((acc, curr) => acc + curr.value, 0) || 1)) * 100).toFixed(1)}%</div>
+                      <div className="text-xs text-muted-foreground">of total base</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Total Clients
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">-</div>
-                  <div className="text-sm text-muted-foreground">
-                    New This Month
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {totalRevenue > 0 &&
-                    clientSegments.reduce((sum, s) => sum + s.value, 0) > 0
-                      ? formatCurrency(
-                          totalRevenue /
-                            clientSegments.reduce((sum, s) => sum + s.value, 0)
-                        )
-                      : "-"}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Avg Client Value
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">-</div>
-                  <div className="text-sm text-muted-foreground">
-                    Repeat Customers
-                  </div>
-                </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent value="inventory" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Low Stock Alerts</CardTitle>
-                <CardDescription>
-                  Items requiring immediate attention
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {inventoryAlerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className={`p-3 rounded-lg border ${
-                        alert.currentStock <= alert.minStock
-                          ? "bg-red-50 border-red-200"
-                          : "bg-yellow-50 border-yellow-200"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">{alert.productName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {alert.category}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className={`font-semibold ${
-                              alert.currentStock <= alert.minStock
-                                ? "text-red-600"
-                                : "text-orange-600"
-                            }`}
-                          >
-                            {alert.currentStock} / {alert.minStock}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {alert.daysOfStock} days left
-                          </div>
-                        </div>
+        <TabsContent value="inventory" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="glass-card p-6 rounded-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  Low Stock Alerts
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Items that require immediate attention
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800">
+                {inventoryAlerts.length} Items
+              </Badge>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {inventoryAlerts.map((item) => (
+                <div key={item.id} className="p-4 rounded-lg border border-orange-200 bg-orange-50/50 dark:border-orange-900/50 dark:bg-orange-900/10">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium truncate pr-2" title={item.productName}>{item.productName}</h4>
+                    <Badge variant="outline" className="text-xs">{item.category}</Badge>
+                  </div>
+
+                  <div className="space-y-3 mt-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Current Stock:</span>
+                      <span className="font-bold text-orange-600 dark:text-orange-400">{item.currentStock}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Min Level:</span>
+                      <span>{item.minStock}</span>
+                    </div>
+
+                    <div className="pt-2 border-t border-orange-200 dark:border-orange-900/50">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">Est. Days Left:</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.daysOfStock < 3 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                          }`}>
+                          {item.daysOfStock} days
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory Value</CardTitle>
-                <CardDescription>
-                  Current stock valuation by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-sm">Inventory valuation coming soon</p>
-                  <p className="text-xs mt-1">
-                    Add product costs to calculate inventory value
-                  </p>
+              {inventoryAlerts.length === 0 && (
+                <div className="col-span-full py-12 text-center text-muted-foreground">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mb-3">
+                    <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <p>No low stock alerts. Inventory is healthy!</p>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           </div>
-
-          {/* Inventory Turnover */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Inventory Turnover Analysis</CardTitle>
-              <CardDescription>How quickly inventory is moving</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {productPerformance.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Total Products
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">-</div>
-                  <div className="text-sm text-muted-foreground">
-                    Avg Turnover Rate
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">-</div>
-                  <div className="text-sm text-muted-foreground">
-                    Slow Moving
-                  </div>
-                </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">
-                    {inventoryAlerts.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Low Stock</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

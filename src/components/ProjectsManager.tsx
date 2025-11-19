@@ -42,10 +42,23 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  MoreHorizontal,
+  Image as ImageIcon,
+  Video,
+  Filter
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "../utils/currency";
 import { useAuth } from "../contexts/AuthContext";
+import { cn } from "../lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 interface Project {
   id: string;
@@ -129,7 +142,6 @@ export function ProjectsManager() {
       }));
 
       setProjects(mappedProjects);
-      console.log(`Loaded ${mappedProjects.length} projects`);
     } catch (error) {
       console.error("Error loading projects:", error);
       toast.error("Failed to load projects");
@@ -222,8 +234,6 @@ export function ProjectsManager() {
         created_at: new Date().toISOString(),
       };
 
-      console.log("Inserting project data:", projectData);
-
       const { data, error } = await supabase
         .from("projects")
         .insert([projectData])
@@ -231,7 +241,6 @@ export function ProjectsManager() {
         .single();
 
       if (error) {
-        console.error("Supabase error details:", error);
         throw error;
       }
 
@@ -273,24 +282,15 @@ export function ProjectsManager() {
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      planning: "secondary",
-      in_progress: "default",
-      completed: "default",
-      on_hold: "outline",
-      cancelled: "destructive",
+      planning: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700",
+      in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+      completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
+      on_hold: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800",
+      cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
     } as const;
-    const colors = {
-      planning: "text-muted-foreground",
-      in_progress: "text-blue-600",
-      completed: "text-green-600",
-      on_hold: "text-orange-600",
-      cancelled: "text-red-600",
-    };
+
     return (
-      <Badge
-        variant={variants[status as keyof typeof variants] || "outline"}
-        className={colors[status as keyof typeof colors]}
-      >
+      <Badge variant="outline" className={cn("capitalize border", variants[status as keyof typeof variants] || "")}>
         {status.replace("_", " ")}
       </Badge>
     );
@@ -299,7 +299,7 @@ export function ProjectsManager() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-600" />;
       case "in_progress":
         return <Clock className="h-4 w-4 text-blue-600" />;
       case "on_hold":
@@ -310,22 +310,22 @@ export function ProjectsManager() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 animate-enter">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold text-foreground">Projects</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Projects</h2>
           <p className="text-muted-foreground">
             Manage client projects and track progress
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25 transition-all duration-300 hover:scale-[1.02]">
               <Plus className="h-4 w-4 mr-2" />
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col glass-panel border-white/20">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
@@ -344,7 +344,7 @@ export function ProjectsManager() {
                     setNewProject({ ...newProject, clientId: value })
                   }
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
@@ -367,7 +367,7 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, name: e.target.value })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="e.g., Office Interior Painting"
                 />
               </div>
@@ -382,7 +382,7 @@ export function ProjectsManager() {
                     setNewProject({ ...newProject, projectType: value })
                   }
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -405,7 +405,7 @@ export function ProjectsManager() {
                     setNewProject({ ...newProject, status: value as any })
                   }
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -428,7 +428,7 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, location: e.target.value })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Project location"
                 />
               </div>
@@ -444,7 +444,7 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, startDate: e.target.value })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                 />
               </div>
 
@@ -459,7 +459,7 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, endDate: e.target.value })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                 />
               </div>
 
@@ -478,7 +478,7 @@ export function ProjectsManager() {
                       estimatedBudget: parseFloat(e.target.value),
                     })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="Estimated budget"
                 />
               </div>
@@ -496,7 +496,7 @@ export function ProjectsManager() {
                       description: e.target.value,
                     })
                   }
-                  className="col-span-3 h-20"
+                  className="col-span-3 h-20 glass-input"
                   placeholder="Project description..."
                 />
               </div>
@@ -515,7 +515,7 @@ export function ProjectsManager() {
                       const files = Array.from(e.target.files || []);
                       setSelectedFiles(files);
                     }}
-                    className="cursor-pointer"
+                    className="cursor-pointer glass-input"
                   />
                   {selectedFiles.length > 0 && (
                     <div className="text-sm text-muted-foreground">
@@ -544,7 +544,7 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, videoLink: e.target.value })
                   }
-                  className="col-span-3"
+                  className="col-span-3 glass-input"
                   placeholder="https://youtube.com/watch?v=..."
                 />
               </div>
@@ -559,17 +559,18 @@ export function ProjectsManager() {
                   onChange={(e) =>
                     setNewProject({ ...newProject, notes: e.target.value })
                   }
-                  className="col-span-3 h-16"
+                  className="col-span-3 h-16 glass-input"
                   placeholder="Additional notes..."
                 />
               </div>
             </div>
 
-            <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background pt-4 border-t mt-2">
+            <DialogFooter className="flex-shrink-0 sticky bottom-0 pt-4 border-t border-white/10 mt-2">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
               <Button
                 onClick={handleAddProject}
                 disabled={saving}
-                className="w-full sm:w-auto"
+                className="bg-primary text-white"
               >
                 {saving ? "Creating..." : "Create Project"}
               </Button>
@@ -579,7 +580,7 @@ export function ProjectsManager() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-6 backdrop-blur-sm border shadow-sm">
+      <div className="glass-card p-6 rounded-2xl animate-enter" style={{ animationDelay: '100ms' }}>
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -587,12 +588,15 @@ export function ProjectsManager() {
               placeholder="Search projects by name, client, number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 focus:border-blue-500"
+              className="pl-10 glass-input border-0 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by status" />
+            <SelectTrigger className="w-full sm:w-48 glass-input border-0 bg-white/50 dark:bg-gray-800/50">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Filter by status" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
@@ -604,186 +608,183 @@ export function ProjectsManager() {
             </SelectContent>
           </Select>
         </div>
-      </Card>
+      </div>
 
       {/* Projects Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredProjects.map((project) => (
-          <Card
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter" style={{ animationDelay: '200ms' }}>
+        {filteredProjects.map((project, index) => (
+          <div
             key={project.id}
-            className="backdrop-blur-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+            className="group glass-card rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 animate-enter"
+            style={{ animationDelay: `${index * 50}ms` }}
           >
-            <CardHeader className="pb-4">
+            <div className="p-6 space-y-5">
               <div className="flex justify-between items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg truncate">
+                  <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors truncate">
                     {project.name}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
                     {project.projectNumber}
-                  </CardDescription>
+                  </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(project.status)}
-                  {getStatusBadge(project.status)}
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedProject(project);
+                      setIsViewDialogOpen(true);
+                    }}>
+                      <Eye className="h-4 w-4 mr-2" /> View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedProject(project);
+                      setNewProject(project);
+                      setIsEditDialogOpen(true);
+                    }}>
+                      <Edit className="h-4 w-4 mr-2" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                      onClick={() => handleDeleteProject(project.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{project.clientName}</span>
+
+              <div className="flex items-center gap-2">
+                {getStatusBadge(project.status)}
+                <Badge variant="outline" className="capitalize">
+                  {project.projectType}
+                </Badge>
               </div>
 
-              {project.location && (
-                <div className="flex items-center space-x-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {project.location}
-                  </span>
+              <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <User className="h-4 w-4 text-primary/60" />
+                  <span className="text-foreground font-medium">{project.clientName}</span>
                 </div>
-              )}
 
-              {project.startDate && (
-                <div className="flex items-center space-x-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {new Date(project.startDate).toLocaleDateString()}
-                    {project.endDate &&
-                      ` - ${new Date(project.endDate).toLocaleDateString()}`}
-                  </span>
-                </div>
-              )}
+                {project.location && (
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 text-primary/60" />
+                    <span className="truncate">{project.location}</span>
+                  </div>
+                )}
 
-              {project.estimatedBudget && (
-                <div className="flex items-center space-x-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-foreground font-semibold">
-                    {formatCurrency(project.estimatedBudget)}
-                  </span>
-                </div>
-              )}
+                {project.startDate && (
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4 text-primary/60" />
+                    <span>
+                      {new Date(project.startDate).toLocaleDateString()}
+                      {project.endDate &&
+                        ` - ${new Date(project.endDate).toLocaleDateString()}`}
+                    </span>
+                  </div>
+                )}
 
-              {project.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {project.description}
-                </p>
-              )}
+                {project.estimatedBudget && (
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <DollarSign className="h-4 w-4 text-primary/60" />
+                    <span className="text-foreground font-semibold">
+                      {formatCurrency(project.estimatedBudget)}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Media indicators */}
               {((project.images?.length ?? 0) > 0 || project.videoLink) && (
-                <div className="flex gap-2 text-xs">
+                <div className="flex gap-2 pt-2">
                   {project.images && project.images.length > 0 && (
-                    <Badge variant="outline" className="text-blue-600">
-                      📷 {project.images.length}{" "}
-                      {project.images.length === 1 ? "image" : "images"}
+                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                      <ImageIcon className="h-3 w-3 mr-1" />
+                      {project.images.length} {project.images.length === 1 ? "image" : "images"}
                     </Badge>
                   )}
                   {project.videoLink && (
-                    <Badge variant="outline" className="text-purple-600">
-                      🎥 Video
+                    <Badge variant="secondary" className="bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
+                      <Video className="h-3 w-3 mr-1" />
+                      Video
                     </Badge>
                   )}
                 </div>
               )}
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    setSelectedProject(project);
-                    setIsViewDialogOpen(true);
-                  }}
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  View
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedProject(project);
-                    setNewProject(project);
-                    setIsEditDialogOpen(true);
-                  }}
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={() => handleDeleteProject(project.id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
       {filteredProjects.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              No projects found. Create your first project!
-            </p>
-          </CardContent>
-        </Card>
+        <div className="glass-card p-12 text-center rounded-xl">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Briefcase className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">No projects found</h3>
+          <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+            Get started by creating a new project for one of your clients.
+          </p>
+          <Button onClick={() => setIsAddDialogOpen(true)} className="mt-4 bg-primary text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Project
+          </Button>
+        </div>
       )}
 
       {/* View Project Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-panel border-white/20">
           {selectedProject && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center space-x-3">
-                  <Briefcase className="h-5 w-5" />
+                <DialogTitle className="flex items-center space-x-3 text-2xl">
+                  <Briefcase className="h-6 w-6 text-primary" />
                   <div>
                     <div>{selectedProject.name}</div>
-                    <div className="text-sm text-gray-500 font-normal">
+                    <div className="text-sm text-muted-foreground font-normal mt-1">
                       {selectedProject.projectNumber}
                     </div>
                   </div>
                 </DialogTitle>
               </DialogHeader>
 
-              <div className="space-y-6">
+              <div className="space-y-8 mt-4">
                 {/* Status and Basic Info */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium mb-3">Project Status</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(selectedProject.status)}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="glass-card p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Project Status</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Status</span>
                         {getStatusBadge(selectedProject.status)}
                       </div>
-                      <div className="text-sm text-gray-600">
-                        Type:{" "}
-                        <span className="font-medium">
-                          {selectedProject.projectType}
-                        </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Type</span>
+                        <Badge variant="outline" className="capitalize">{selectedProject.projectType}</Badge>
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium mb-3">Client Information</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <User className="h-4 w-4 text-gray-500" />
+                  <div className="glass-card p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Client Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <User className="h-4 w-4 text-primary" />
                         <span className="font-medium">
                           {selectedProject.clientName}
                         </span>
                       </div>
                       {selectedProject.location && (
-                        <div className="flex items-center space-x-2 text-sm">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-600">
+                        <div className="flex items-center gap-3 text-sm">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span className="text-muted-foreground">
                             {selectedProject.location}
                           </span>
                         </div>
@@ -792,158 +793,74 @@ export function ProjectsManager() {
                   </div>
                 </div>
 
-                {/* Timeline */}
-                {(selectedProject.startDate || selectedProject.endDate) && (
-                  <div>
-                    <h4 className="font-medium mb-3">Timeline</h4>
-                    <div className="flex items-center space-x-4 text-sm">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <div>
-                        {selectedProject.startDate && (
-                          <span>
-                            Start:{" "}
-                            {new Date(
-                              selectedProject.startDate
-                            ).toLocaleDateString()}
-                          </span>
-                        )}
-                        {selectedProject.endDate && (
-                          <span className="ml-4">
-                            End:{" "}
-                            {new Date(
-                              selectedProject.endDate
-                            ).toLocaleDateString()}
-                          </span>
-                        )}
+                {/* Timeline & Budget */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {(selectedProject.startDate || selectedProject.endDate) && (
+                    <div className="glass-card p-4 rounded-lg">
+                      <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Timeline</h4>
+                      <div className="flex items-center gap-3 text-sm">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span>
+                          {selectedProject.startDate ? new Date(selectedProject.startDate).toLocaleDateString() : 'N/A'}
+                          {' - '}
+                          {selectedProject.endDate ? new Date(selectedProject.endDate).toLocaleDateString() : 'N/A'}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Budget */}
-                {(selectedProject.estimatedBudget ||
-                  selectedProject.actualCost) && (
-                  <div>
-                    <h4 className="font-medium mb-3">Budget</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedProject.estimatedBudget && (
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <div className="text-xs text-gray-600 mb-1">
-                            Estimated Budget
-                          </div>
-                          <div className="text-lg font-bold text-blue-600">
-                            {formatCurrency(selectedProject.estimatedBudget)}
-                          </div>
-                        </div>
-                      )}
-                      {selectedProject.actualCost &&
-                        selectedProject.actualCost > 0 && (
-                          <div className="bg-green-50 p-3 rounded-lg">
-                            <div className="text-xs text-gray-600 mb-1">
-                              Actual Cost
-                            </div>
-                            <div className="text-lg font-bold text-green-600">
-                              {formatCurrency(selectedProject.actualCost)}
-                            </div>
-                          </div>
-                        )}
+                  {selectedProject.estimatedBudget && (
+                    <div className="glass-card p-4 rounded-lg">
+                      <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Financials</h4>
+                      <div className="flex items-center gap-3 text-sm">
+                        <DollarSign className="h-4 w-4 text-primary" />
+                        <span className="font-bold text-lg">
+                          {formatCurrency(selectedProject.estimatedBudget)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">(Estimated)</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Description */}
                 {selectedProject.description && (
-                  <div>
-                    <h4 className="font-medium mb-3">Description</h4>
-                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                  <div className="glass-card p-6 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Description</h4>
+                    <p className="text-sm leading-relaxed text-foreground/90">
                       {selectedProject.description}
                     </p>
                   </div>
                 )}
 
-                {/* Images */}
-                {selectedProject.images &&
-                  selectedProject.images.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-3">
-                        Project Images ({selectedProject.images.length})
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {selectedProject.images.map((imageUrl, index) => (
-                          <div key={index} className="relative group">
-                            <img
-                              src={imageUrl}
-                              alt={`Project image ${index + 1}`}
-                              className="w-full h-48 object-cover rounded-lg border shadow-sm"
-                            />
-                            <a
-                              href={imageUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center"
-                            >
-                              <Eye className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                {/* Video Link */}
-                {selectedProject.videoLink && (
-                  <div>
-                    <h4 className="font-medium mb-3">Video</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <a
-                        href={selectedProject.videoLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 underline flex items-center space-x-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span>View Video</span>
-                      </a>
-                      <p className="text-xs text-gray-500 mt-2 break-all">
-                        {selectedProject.videoLink}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Notes */}
                 {selectedProject.notes && (
-                  <div>
-                    <h4 className="font-medium mb-3">Notes</h4>
-                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap">
+                  <div className="glass-card p-6 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Notes</h4>
+                    <p className="text-sm leading-relaxed text-muted-foreground italic">
                       {selectedProject.notes}
                     </p>
                   </div>
                 )}
 
-                {/* Created Date */}
-                <div className="text-xs text-gray-500 border-t pt-4">
-                  Created:{" "}
-                  {new Date(selectedProject.createdAt).toLocaleString()}
-                </div>
+                {/* Media Gallery */}
+                {selectedProject.images && selectedProject.images.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Project Gallery</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {selectedProject.images.map((img, idx) => (
+                        <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-white/10 group">
+                          <img
+                            src={img}
+                            alt={`Project image ${idx + 1}`}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsViewDialogOpen(false);
-                    setNewProject(selectedProject);
-                    setIsEditDialogOpen(true);
-                  }}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Project
-                </Button>
-                <Button onClick={() => setIsViewDialogOpen(false)}>
-                  Close
-                </Button>
-              </DialogFooter>
             </>
           )}
         </DialogContent>

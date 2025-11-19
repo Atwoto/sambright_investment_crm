@@ -1,30 +1,18 @@
 import React, { useState, useEffect } from "react";
 import {
-  Plus,
+  TrendingUp,
   Package,
   Users,
-  ShoppingCart,
-  TrendingUp,
-  AlertTriangle,
   Palette,
   Brush,
+  ShoppingCart,
+  Sparkles,
+  LogOut,
   Sun,
   Moon,
-  Menu,
-  X,
-  LogOut,
-  Sparkles,
+  Menu
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./components/ui/card";
 import { Button } from "./components/ui/button";
-import { Badge } from "./components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "./components/ui/sheet";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { ProductsManager } from "./components/ProductsManager";
@@ -37,8 +25,7 @@ import { ReportsAnalytics } from "./components/ReportsAnalytics";
 import { AIColorAdvisor } from "./components/AIColorAdvisor";
 import { Login } from "./components/Login";
 import { CustomerPortal } from "./components/CustomerPortal";
-import { supabase } from "./utils/supabase/client";
-import { projectId, publicAnonKey } from "./utils/supabase/info";
+import { MainLayout } from "./components/layout/MainLayout";
 import { useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
 
@@ -46,72 +33,12 @@ export default function App() {
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [lowStockAlerts, setLowStockAlerts] = useState(0);
-  const [pendingOrders, setPendingOrders] = useState(0);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Fetch dynamic data for low stock alerts and pending orders
-  useEffect(() => {
-    const fetchHeaderMetrics = async () => {
-      try {
-        // Fetch low stock items (products with stock_level < min_stock_level)
-        const { data: lowStockItems, error: lowStockError } = await supabase
-          .from("products")
-          .select("id, stock_level, min_stock_level");
-
-        if (lowStockError) {
-          console.error("Error fetching low stock items:", lowStockError);
-        } else {
-          // Filter items where stock_level < min_stock_level
-          const actualLowStockItems =
-            lowStockItems?.filter(
-              (item) => item.stock_level < item.min_stock_level
-            ) || [];
-          setLowStockAlerts(actualLowStockItems.length);
-        }
-
-        // Fetch pending orders (orders with payment_status = 'pending' or status in 'draft', 'sent')
-        const { data: pendingOrdersData, error: pendingOrdersError } =
-          await supabase
-            .from("orders")
-            .select("id")
-            .or("payment_status.eq.pending,status.eq.draft,status.eq.sent");
-
-        if (pendingOrdersError) {
-          console.error("Error fetching pending orders:", pendingOrdersError);
-        } else {
-          setPendingOrders(pendingOrdersData?.length || 0);
-        }
-      } catch (error) {
-        console.error("Error fetching header metrics:", error);
-      }
-    };
-
-    fetchHeaderMetrics();
-
-    // Refresh metrics when tab changes (to reflect any updates made in other tabs)
-    const interval = setInterval(fetchHeaderMetrics, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [activeTab]);
-
-  const navigationItems = [
-    { id: "dashboard", label: "Dashboard", icon: TrendingUp },
-    { id: "products", label: "Products", icon: Package },
-    { id: "clients", label: "Clients", icon: Users },
-    { id: "projects", label: "Projects", icon: Palette },
-    { id: "suppliers", label: "Suppliers", icon: Brush },
-    { id: "orders", label: "Orders", icon: ShoppingCart },
-    { id: "inventory", label: "Inventory", icon: Package },
-    { id: "ai-advisor", label: "AI Color Advisor", icon: Sparkles },
-    { id: "reports", label: "Reports", icon: TrendingUp },
-  ];
 
   // Show loading state while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -172,291 +99,19 @@ export default function App() {
     );
   }
 
+  // Admin/Staff Layout
   return (
-    <div
-      className={`min-h-screen ${
-        theme === "dark"
-          ? "dark bg-gradient-to-br from-gray-900 to-gray-800"
-          : "bg-gradient-to-br from-slate-50 to-blue-50"
-      }`}
-    >
-      {/* Header */}
-      <header
-        className={`backdrop-blur-md border-b px-4 sm:px-6 py-4 sticky top-0 z-50 ${
-          theme === "dark"
-            ? "bg-gray-800/80 border-gray-700/50"
-            : "bg-white/80 border-gray-200/50"
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl shadow-lg">
-              <Palette className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Sambright Investment Ltd
-              </h1>
-              <p
-                className={`text-sm ${
-                  theme === "dark" ? "text-gray-300" : "text-gray-600"
-                }`}
-              >
-                Painting Business CRM
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            {/* User info and sign out - Hidden on mobile */}
-            <div className="hidden sm:flex items-center space-x-3">
-              <span className="text-sm text-muted-foreground">
-                {user.name} ({user.role})
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={signOut}
-                className="flex items-center space-x-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
-              </Button>
-            </div>
-
-            {/* Alerts - Hidden on mobile */}
-            <div className="hidden sm:flex items-center space-x-3">
-              {lowStockAlerts > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="flex items-center space-x-1 animate-pulse"
-                >
-                  <AlertTriangle className="h-3 w-3" />
-                  <span>{lowStockAlerts} Low Stock</span>
-                </Badge>
-              )}
-              {pendingOrders > 0 && (
-                <Badge
-                  variant="outline"
-                  className="flex items-center space-x-1 border-blue-200 bg-blue-50 text-blue-700"
-                >
-                  <ShoppingCart className="h-3 w-3" />
-                  <span>{pendingOrders} Pending</span>
-                </Badge>
-              )}
-            </div>
-
-            {/* Theme toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="hidden sm:flex"
-            >
-              {theme === "light" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-
-            {/* Mobile menu trigger */}
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="sm:hidden">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-72">
-                <div className="flex flex-col space-y-4 mt-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-semibold">Navigation</h2>
-                    <Button variant="ghost" size="sm" onClick={toggleTheme}>
-                      {theme === "light" ? (
-                        <Sun className="h-4 w-4" />
-                      ) : (
-                        <Moon className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Mobile user info and sign out */}
-                  <div className="space-y-2 pb-4 border-b">
-                    <div className="text-sm text-muted-foreground">
-                      Welcome, {user.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground capitalize">
-                      Role: {user.role}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={signOut}
-                      className="w-full flex items-center space-x-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Sign Out</span>
-                    </Button>
-                  </div>
-
-                  {/* Mobile alerts */}
-                  <div className="space-y-2">
-                    {lowStockAlerts > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="flex items-center space-x-2 w-full justify-center py-2"
-                      >
-                        <AlertTriangle className="h-4 w-4" />
-                        <span>{lowStockAlerts} Low Stock Items</span>
-                      </Badge>
-                    )}
-                    {pendingOrders > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="flex items-center space-x-2 w-full justify-center py-2 border-blue-200 bg-blue-50 text-blue-700"
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                        <span>{pendingOrders} Pending Orders</span>
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Mobile navigation */}
-                  {navigationItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Button
-                        key={item.id}
-                        variant={activeTab === item.id ? "default" : "ghost"}
-                        className="justify-start w-full py-3"
-                        onClick={() => {
-                          setActiveTab(item.id);
-                          setIsMobileMenuOpen(false);
-                        }}
-                      >
-                        <Icon className="h-5 w-5 mr-3" />
-                        {item.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto">
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-8"
-        >
-          {/* Desktop Navigation */}
-          <div className="hidden sm:block overflow-x-auto">
-            <TabsList
-              className={`inline-flex backdrop-blur-sm border shadow-sm ${
-                theme === "dark" ? "bg-gray-800/80" : "bg-white/80"
-              }`}
-            >
-              {navigationItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <TabsTrigger
-                    key={item.id}
-                    value={item.id}
-                    className="flex items-center space-x-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all duration-200"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="hidden lg:inline">{item.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
-
-          {/* Mobile breadcrumb */}
-          <div className="block sm:hidden">
-            <div
-              className={`flex items-center space-x-2 text-sm mb-4 ${
-                theme === "dark" ? "text-gray-300" : "text-gray-600"
-              }`}
-            >
-              <span>Current:</span>
-              <Badge
-                variant="outline"
-                className={theme === "dark" ? "bg-gray-800" : "bg-white"}
-              >
-                {navigationItems.find((item) => item.id === activeTab)?.label}
-              </Badge>
-            </div>
-          </div>
-
-          <TabsContent
-            value="dashboard"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <DashboardOverview />
-          </TabsContent>
-
-          <TabsContent
-            value="products"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <ProductsManager />
-          </TabsContent>
-
-          <TabsContent
-            value="clients"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <ClientsManager />
-          </TabsContent>
-
-          <TabsContent
-            value="projects"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <ProjectsManager />
-          </TabsContent>
-
-          <TabsContent
-            value="suppliers"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <SuppliersManager />
-          </TabsContent>
-
-          <TabsContent
-            value="orders"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <OrdersManager />
-          </TabsContent>
-
-          <TabsContent
-            value="inventory"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <InventoryTransactions />
-          </TabsContent>
-
-          <TabsContent
-            value="ai-advisor"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <AIColorAdvisor />
-          </TabsContent>
-
-          <TabsContent
-            value="reports"
-            className="space-y-8 animate-in fade-in-50 duration-200"
-          >
-            <ReportsAnalytics />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+    <MainLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      {activeTab === "dashboard" && <DashboardOverview />}
+      {activeTab === "products" && <ProductsManager />}
+      {activeTab === "clients" && <ClientsManager />}
+      {activeTab === "projects" && <ProjectsManager />}
+      {activeTab === "suppliers" && <SuppliersManager />}
+      {activeTab === "orders" && <OrdersManager />}
+      {activeTab === "inventory" && <InventoryTransactions />}
+      {activeTab === "ai-advisor" && <AIColorAdvisor />}
+      {activeTab === "reports" && <ReportsAnalytics />}
+    </MainLayout>
   );
 }
+

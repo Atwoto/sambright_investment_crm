@@ -19,8 +19,12 @@ import {
   Palette,
   X,
   Clock,
+  CheckCircle2,
+  Lightbulb,
+  ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "../lib/utils";
 
 interface UploadedImage {
   id: string;
@@ -166,204 +170,226 @@ export function AIColorAdvisor() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground flex items-center space-x-2">
-            <Sparkles className="h-8 w-8 text-purple-600" />
-            <span>AI Color Advisor</span>
+    <div className="space-y-8 animate-in fade-in-50 duration-500">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 animate-enter">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <Sparkles className="h-6 w-6 text-purple-500" />
+            </div>
+            AI Color Advisor
           </h2>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground">
             Upload house images to get AI recommendations and 3D visual previews
           </p>
         </div>
         {(uploadedImages.length > 0 || recommendations.length > 0) && (
-          <Button variant="outline" onClick={resetAnalysis}>
+          <Button variant="outline" onClick={resetAnalysis} className="glass-button">
             <RefreshCw className="h-4 w-4 mr-2" />
             Start Over
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Upload className="h-5 w-5" />
-              <span>Upload House Images</span>
-            </CardTitle>
-            <CardDescription>
-              Add multiple images of the house from different angles for better
-              results.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors">
-              <input
-                type="file"
-                id="image-upload"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer flex flex-col items-center space-y-2"
-              >
-                <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Click to upload or drag and drop
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  PNG, JPG, WEBP up to 10MB each
-                </span>
-              </label>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-enter" style={{ animationDelay: '100ms' }}>
+        <div className="glass-card p-6 rounded-xl space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" />
+                Upload House Images
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Add multiple images from different angles
+              </p>
             </div>
-
             {uploadedImages.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">
-                    Uploaded Images ({uploadedImages.length})
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={removeAllImages}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Remove All
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {uploadedImages.map((image) => (
-                    <div
-                      key={image.id}
-                      className="relative group rounded-lg overflow-hidden border border-gray-200"
-                    >
-                      <img
-                        src={image.preview}
-                        alt="House"
-                        className="w-full h-32 object-cover"
-                      />
-                      <button
-                        onClick={() => removeImage(image.id)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-80 hover:opacity-100 transition-opacity"
-                        title="Remove this image"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={removeAllImages}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>How It Works</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">
-                  1
+          <div className="relative group">
+            <input
+              type="file"
+              id="image-upload"
+              multiple
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <label
+              htmlFor="image-upload"
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300",
+                "border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5",
+                uploadedImages.length > 0 ? "h-32" : "h-64"
+              )}
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                <div className="p-4 bg-primary/10 rounded-full mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <ImageIcon className="h-8 w-8 text-primary" />
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Upload Images</h4>
-                  <p className="text-sm text-gray-600">
-                    Add photos of the house from different angles for the best
-                    results.
-                  </p>
-                </div>
+                <p className="mb-2 text-sm font-medium text-foreground">
+                  <span className="text-primary">Click to upload</span> or drag and drop
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG, WEBP up to 10MB each
+                </p>
               </div>
+            </label>
+          </div>
 
-              <div className="flex items-start space-x-3">
-                <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">
-                  2
+          {uploadedImages.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {uploadedImages.map((image) => (
+                <div
+                  key={image.id}
+                  className="relative group rounded-lg overflow-hidden border border-border/50 aspect-video"
+                >
+                  <img
+                    src={image.preview}
+                    alt="House"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <button
+                      onClick={() => removeImage(image.id)}
+                      className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors transform hover:scale-110"
+                      title="Remove this image"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Get Previews</h4>
-                  <p className="text-sm text-gray-600">
-                    Click the button to send your images to our AI workflow,
-                    which will generate color palettes and realistic 3D
-                    previews.
-                  </p>
-                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="glass-card p-6 rounded-xl space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-yellow-500" />
+              How It Works
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Simple steps to get your perfect color palette
+            </p>
+          </div>
+
+          <div className="space-y-6 relative">
+            <div className="absolute left-[15px] top-2 bottom-2 w-[2px] bg-gradient-to-b from-purple-500/20 via-blue-500/20 to-transparent"></div>
+
+            <div className="flex items-start space-x-4 relative">
+              <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold flex-shrink-0 z-10 ring-4 ring-background">
+                1
               </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">
-                  3
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Review & Choose</h4>
-                  <p className="text-sm text-gray-600">
-                    Review the 3 different AI-generated options and choose the
-                    best fit for your project.
-                  </p>
-                </div>
+              <div>
+                <h4 className="font-medium text-foreground">Upload Images</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add photos of the house from different angles. Good lighting helps the AI understand the architecture better.
+                </p>
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
-              <h4 className="font-medium text-blue-900 mb-2">💡 Pro Tips</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Take photos in good natural lighting.</li>
-                <li>• Include the entire house in the frame.</li>
-                <li>• Capture the surrounding landscape if possible.</li>
-                <li>• Upload multiple angles for a more accurate analysis.</li>
-              </ul>
+            <div className="flex items-start space-x-4 relative">
+              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold flex-shrink-0 z-10 ring-4 ring-background">
+                2
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">AI Analysis</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Our advanced AI analyzes the architectural style, surroundings, and lighting to generate tailored color palettes.
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="flex items-start space-x-4 relative">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold flex-shrink-0 z-10 ring-4 ring-background">
+                3
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Review & Visualize</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Get 3 distinct options with photorealistic 3D previews showing exactly how your house will look.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl p-4">
+            <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Pro Tips
+            </h4>
+            <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1 ml-6 list-disc">
+              <li>Take photos in good natural lighting</li>
+              <li>Include the entire house in the frame</li>
+              <li>Capture the surrounding landscape</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-4 mt-6">
+      <div className="space-y-6 animate-enter" style={{ animationDelay: '200ms' }}>
         <Button
           onClick={getAiRecommendationsAndPreviews}
           disabled={uploadedImages.length === 0 || isLoading}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg border-0 py-6 text-lg"
-          size="lg"
+          className={cn(
+            "w-full h-auto py-8 text-lg font-semibold shadow-lg transition-all duration-300",
+            "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white",
+            "disabled:opacity-50 disabled:cursor-not-allowed"
+          )}
         >
           {isLoading ? (
-            <>
-              <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-              Generating AI Recommendations & 3D Previews...
-            </>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span>Generating Magic...</span>
+              </div>
+              <span className="text-sm font-normal opacity-90">This may take a few minutes</span>
+            </div>
           ) : (
-            <>
-              <Sparkles className="h-5 w-5 mr-3" />
-              Get AI Recommendations & 3D Previews
-            </>
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-6 w-6" />
+                <span>Generate AI Recommendations</span>
+              </div>
+              <span className="text-sm font-normal opacity-90">Get color palettes & 3D previews</span>
+            </div>
           )}
         </Button>
 
         {isLoading && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-center space-x-3">
-              <Clock className="h-5 w-5 text-blue-600" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-blue-900">
-                  Processing your images...
-                </p>
-                <p className="text-lg font-mono font-bold text-blue-700 mt-1">
+          <div className="glass-card p-8 rounded-xl text-center animate-in fade-in slide-in-from-bottom-4">
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="relative w-24 h-24 mx-auto">
+                <div className="absolute inset-0 rounded-full border-4 border-muted opacity-20"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center font-mono font-bold text-xl text-primary">
                   {formatTime(elapsedTime)}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  This usually takes 3-4 minutes. Please don't close this page.
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">Analyzing Architecture</h3>
+                <p className="text-muted-foreground">
+                  Our AI is studying your images to create the perfect color combinations.
+                  Please don't close this page.
                 </p>
               </div>
-            </div>
 
-            <div className="mt-3">
-              <div className="bg-blue-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-muted/30 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
                     width: `${Math.min((elapsedTime / 210) * 100, 100)}%`,
                   }}
@@ -375,82 +401,103 @@ export function AIColorAdvisor() {
       </div>
 
       {recommendations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Palette className="h-5 w-5 text-purple-600" />
-              <span>AI Recommendations & 3D Previews</span>
-            </CardTitle>
-            <CardDescription>
-              Review the 3 options generated by our AI workflow.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue={recommendations[0]?.id} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-3">
-                {recommendations.map((rec, index) => (
-                  <TabsTrigger key={rec.id} value={rec.id}>
-                    Option {index + 1}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        <div className="glass-card p-6 rounded-xl animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <Palette className="h-6 w-6 text-purple-500" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">AI Recommendations</h3>
+              <p className="text-sm text-muted-foreground">
+                Review the generated options for your project
+              </p>
+            </div>
+          </div>
 
-              {recommendations.map((rec) => (
-                <TabsContent key={rec.id} value={rec.id} className="space-y-4">
-                  <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">
-                      {rec.description}
-                    </h3>
+          <Tabs defaultValue={recommendations[0]?.id} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3 glass-panel p-1 rounded-xl">
+              {recommendations.map((rec, index) => (
+                <TabsTrigger
+                  key={rec.id}
+                  value={rec.id}
+                  className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  Option {index + 1}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-                    {rec.generatedImage && (
-                      <div className="mb-6">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">
-                          AI-Generated 3D Preview:
-                        </h4>
-                        <div className="bg-card rounded-lg p-4 border">
-                          <img
-                            src={rec.generatedImage}
-                            alt={`${rec.description} painted house preview`}
-                            className="w-full max-w-md mx-auto rounded-lg shadow-sm"
-                          />
-                          <p className="text-xs text-gray-500 text-center mt-2">
-                            Photorealistic 3D rendering generated by AI.
-                          </p>
-                        </div>
-                      </div>
-                    )}
+            {recommendations.map((rec) => (
+              <TabsContent key={rec.id} value={rec.id} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="glass-panel p-6 rounded-xl border-l-4 border-l-purple-500">
+                      <h3 className="text-2xl font-bold mb-2">{rec.description}</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {rec.reasoning}
+                      </p>
+                    </div>
 
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">
-                        Color Palette:
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Palette className="h-4 w-4 text-primary" />
+                        Color Palette
                       </h4>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-3">
                         {rec.colors.map((color, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="bg-card px-4 py-2 text-sm"
-                          >
-                            {color}
-                          </Badge>
+                          <div key={idx} className="group relative">
+                            <Badge
+                              variant="outline"
+                              className="pl-8 pr-4 py-2 text-sm bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors cursor-default"
+                            >
+                              <div
+                                className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-black/10 shadow-sm"
+                                style={{ backgroundColor: color.toLowerCase() }} // Assuming color names are valid CSS colors or hex codes
+                              />
+                              {color}
+                            </Badge>
+                          </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="bg-card rounded-lg p-4 border">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">
-                        Application & Reasoning:
-                      </h4>
-                      <p className="text-sm text-gray-600 whitespace-pre-line">
-                        {rec.reasoning}
-                      </p>
+                    <div className="flex gap-4 pt-4">
+                      <Button className="flex-1 glass-button">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Select This Option
+                      </Button>
+                      <Button variant="outline" className="glass-button">
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        Save to Project
+                      </Button>
                     </div>
                   </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </CardContent>
-        </Card>
+
+                  {rec.generatedImage && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        AI-Generated 3D Preview
+                      </h4>
+                      <div className="relative rounded-xl overflow-hidden shadow-2xl border border-border/50 group">
+                        <img
+                          src={rec.generatedImage}
+                          alt={`${rec.description} painted house preview`}
+                          className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                          <p className="text-white text-sm font-medium">
+                            Photorealistic 3D rendering generated by AI
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
       )}
     </div>
   );

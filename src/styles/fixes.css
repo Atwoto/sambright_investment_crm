@@ -1,0 +1,164 @@
+/* UI/UX Fixes for Better Contrast and Readability */
+
+/* Improve text contrast for better readability */
+.text-muted-foreground {
+    color: rgb(75 85 99) !important;
+    /* gray-600 */
+}
+
+.dark .text-muted-foreground {
+    color: rgb(156 163 175) !important;
+    /* gray-400 */
+}
+
+/* Improve badge contrast */
+.badge-outline {
+    background-color: white !important;
+    border-color: rgb(156 163 175) !important;
+    /* gray-400 */
+    color: rgb(17 24 39) !important;
+    /* gray-900 */
+}
+
+.dark .badge-outline {
+    background-color: rgb(55 65 81) !important;
+    /* gray-700 */
+    border-color: rgb(107 114 128) !important;
+    /* gray-500 */
+    color: rgb(243 244 246) !important;
+    /* gray-100 */
+}
+
+/* Improve card contrast */
+.card {
+    background-color: white !important;
+    border-color: rgb(229 231 235) !important;
+    /* gray-200 */
+}
+
+.dark .card {
+    background-color: rgb(17 24 39) !important;
+    /* gray-900 */
+    border-color: rgb(55 65 81) !important;
+    /* gray-700 */
+}
+
+/* Improve input contrast */
+.input-background {
+    background-color: rgb(249 250 251) !important;
+    /* gray-50 */
+}
+
+.dark .input-background {
+    background-color: rgb(31 41 55) !important;
+    /* gray-800 */
+}
+
+/* Improve stock level display */
+.stock-level-low {
+    color: rgb(234 88 12) !important;
+    /* orange-600 */
+    font-weight: 700 !important;
+}
+
+.dark .stock-level-low {
+    color: rgb(251 146 60) !important;
+    /* orange-400 */
+}
+
+.stock-level-good {
+    color: rgb(22 163 74) !important;
+    /* green-600 */
+    font-weight: 700 !important;
+}
+
+.dark .stock-level-good {
+    color: rgb(74 222 128) !important;
+    /* green-400 */
+}
+
+/* Improve price display */
+.price-display {
+    color: rgb(109 40 217) !important;
+    /* purple-700 */
+    font-weight: 700 !important;
+    font-size: 1.125rem !important;
+}
+
+.dark .price-display {
+    color: rgb(196 181 253) !important;
+    /* purple-300 */
+}
+
+/* Improve card titles */
+.card-title {
+    color: rgb(17 24 39) !important;
+    /* gray-900 */
+    font-weight: 700 !important;
+}
+
+.dark .card-title {
+    color: rgb(243 244 246) !important;
+    /* gray-100 */
+}
+
+/* Improve card descriptions */
+.card-description {
+    color: rgb(75 85 99) !important;
+    /* gray-600 */
+    font-weight: 500 !important;
+}
+
+.dark .card-description {
+    color: rgb(156 163 175) !important;
+    /* gray-400 */
+}
+
+/* Low stock card highlight */
+.low-stock-card {
+    border: 2px solid rgb(251 146 60) !important;
+    /* orange-400 */
+    background: linear-gradient(to bottom right, rgb(255 247 237), rgb(254 242 242)) !important;
+    box-shadow: 0 10px 15px -3px rgb(251 146 60 / 0.2) !important;
+}
+
+.dark .low-stock-card {
+    border-color: rgb(234 88 12) !important;
+    /* orange-600 */
+    background: linear-gradient(to bottom right, rgb(124 45 18 / 0.2), rgb(127 29 29 / 0.2)) !important;
+    box-shadow: 0 10px 15px -3px rgb(234 88 12 / 0.3) !important;
+}
+
+/* Info sections with better contrast */
+.info-section {
+    background-color: rgb(249 250 251) !important;
+    /* gray-50 */
+    border: 1px solid rgb(229 231 235) !important;
+    /* gray-200 */
+    padding: 0.5rem !important;
+    border-radius: 0.375rem !important;
+}
+
+.dark .info-section {
+    background-color: rgb(31 41 55 / 0.5) !important;
+    /* gray-800/50 */
+    border-color: rgb(55 65 81) !important;
+    /* gray-700 */
+}
+
+/* Price section highlight */
+.price-section {
+    background-color: rgb(250 245 255) !important;
+    /* purple-50 */
+    border: 1px solid rgb(233 213 255) !important;
+    /* purple-200 */
+    padding: 0.5rem !important;
+    border-radius: 0.375rem !important;
+}
+
+.dark .price-section {
+    background-color: rgb(88 28 135 / 0.2) !important;
+    /* purple-900/20 */
+    border-color: rgb(107 33 168 / 0.3) !important;
+    /* purple-800/30 */
+}
