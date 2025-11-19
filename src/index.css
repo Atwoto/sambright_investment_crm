@@ -1,83 +1,82 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Premium HSL Color Palette */
-    /* Primary: Violet/Indigo - Trustworthy & Creative */
-    --primary: 255 60% 60%;
-    /* #8b5cf6 */
-    --primary-foreground: 0 0% 100%;
-
-    /* Secondary: Teal/Emerald - Growth & Stability */
-    --secondary: 160 60% 45%;
-    --secondary-foreground: 0 0% 100%;
-
-    /* Accent: Pink/Rose - Highlights */
-    --accent: 330 70% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    /* Backgrounds - Light Mode */
-    --background: 210 40% 98%;
-    /* Cool light gray */
-    --foreground: 222 47% 11%;
-    /* Deep blue-gray */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Violet/Indigo Primary */
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Teal/Emerald Secondary */
+    --secondary: 160 60% 45%;
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
+    /* Pink/Rose Accent */
+    --accent: 330 70% 60%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 255 60% 60%;
+    --ring: 262.1 83.3% 57.8%;
 
     --radius: 0.75rem;
   }
 
   .dark {
-    /* Backgrounds - Dark Mode (Deep Rich Blue-Black) */
-    --background: 222 47% 11%;
+    --background: 222.2 47% 11%;
     --foreground: 210 40% 98%;
 
     --card: 222 47% 13%;
-    /* Slightly lighter than bg */
     --card-foreground: 210 40% 98%;
 
     --popover: 222 47% 13%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 255 60% 65%;
-    /* Lighter for dark mode */
-    --primary-foreground: 0 0% 100%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
 
     --secondary: 160 50% 50%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
+    --accent: 330 70% 60%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 255 60% 65%;
+    --ring: 262.1 83.3% 57.8%;
   }
+}
 
+@layer base {
   * {
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
-    @apply font-sans antialiased;
   }
 
   h1,
