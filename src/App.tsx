@@ -8,6 +8,7 @@ import {
   Brush,
   ShoppingCart,
   Sparkles,
+  Shield,
   LogOut,
   Sun,
   Moon,
@@ -24,6 +25,7 @@ import { ProjectsManager } from "./components/ProjectsManager";
 import { InventoryTransactions } from "./components/InventoryTransactions";
 import { ReportsAnalytics } from "./components/ReportsAnalytics";
 import { AIColorAdvisor } from "./components/AIColorAdvisor";
+import { UserManagement } from "./components/UserManagement";
 import { Login } from "./components/Login";
 import { CustomerPortal } from "./components/CustomerPortal";
 import { MainLayout } from "./components/layout/MainLayout";
@@ -116,6 +118,7 @@ export default function App() {
         <Route path="/inventory" element={<InventoryTransactions />} />
         <Route path="/ai-advisor" element={<AIColorAdvisor />} />
         <Route path="/reports" element={<ReportsAnalytics />} />
+        <Route path="/users" element={<UserManagement />} />
       </Routes>
     </MainLayout>
   );

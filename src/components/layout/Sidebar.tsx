@@ -1,21 +1,22 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  Palette, 
-  Brush, 
-  ShoppingCart, 
-  FileBarChart, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  Palette,
+  Brush,
+  ShoppingCart,
+  FileBarChart,
   Sparkles,
+  Shield,
   ChevronLeft,
   ChevronRight,
   LogOut,
   Settings
 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { cn } from '../../lib/utils'; // Assuming you have a utils file, if not I'll create/check it
-// If utils doesn't exist, I'll use a local helper or standard class concatenation
+import { cn } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -26,7 +27,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, signOut }: SidebarProps) {
-  const navItems = [
+  const { user } = useAuth();
+
+  const baseNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'clients', label: 'Clients', icon: Users },
@@ -37,6 +40,11 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
     { id: 'ai-advisor', label: 'AI Advisor', icon: Sparkles, highlight: true },
     { id: 'reports', label: 'Reports', icon: FileBarChart },
   ];
+
+  // Add Users Management only for super admins
+  const navItems = user?.role === 'super_admin'
+    ? [...baseNavItems, { id: 'users', label: 'User Management', icon: Shield, highlight: true }]
+    : baseNavItems;
 
   // Handle dashboard special case (both "/" and "/dashboard")
   const getItemId = (itemId: string) => {
