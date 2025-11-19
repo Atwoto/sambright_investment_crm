@@ -33,18 +33,6 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
     { id: 'projects', label: 'Projects', icon: Palette },
     { id: 'suppliers', label: 'Suppliers', icon: Brush },
     { id: 'orders', label: 'Orders', icon: ShoppingCart },
-    { id: 'inventory', label: 'Inventory', icon: Package }, // Reusing Package icon, maybe find a better one?
-    { id: 'ai-advisor', label: 'AI Advisor', icon: Sparkles, highlight: true },
-    { id: 'reports', label: 'Reports', icon: FileBarChart },
-  ];
-
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'projects', label: 'Projects', icon: Palette },
-    { id: 'suppliers', label: 'Suppliers', icon: Brush },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart },
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'ai-advisor', label: 'AI Advisor', icon: Sparkles, highlight: true },
     { id: 'reports', label: 'Reports', icon: FileBarChart },
