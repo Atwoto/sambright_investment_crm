@@ -213,14 +213,14 @@ export function DashboardOverview() {
     <div className="space-y-8 animate-in fade-in-50 duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-enter">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
-          <p className="text-muted-foreground mt-1">Overview of your business performance.</p>
+        <div className="space-y-1">
+          <h2 className="text-4xl font-display tracking-tight text-foreground">Dashboard</h2>
+          <p className="text-muted-foreground text-base">Overview of your business performance</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button
             onClick={loadDashboardData}
-            className="bg-primary text-white shadow-lg shadow-primary/25 gap-2"
+            className="bg-primary text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 gap-2 transition-all duration-300"
           >
             <Activity className="h-4 w-4" /> Refresh Data
           </Button>
@@ -433,26 +433,26 @@ function MetricCard({ title, value, trend, icon: Icon, gradient, delay, alert }:
   return (
     <div
       className={cn(
-        "glass-card p-6 rounded-2xl relative overflow-hidden group animate-enter",
-        alert && "border-red-500/50 shadow-red-500/10"
+        "glass-card p-6 rounded-2xl relative overflow-hidden group animate-enter hover:-translate-y-1 transition-all duration-300",
+        alert && "border-red-500/50 shadow-red-500/20"
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className={`absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity bg-gradient-to-br ${gradient} rounded-bl-2xl`}>
-        <Icon className="h-12 w-12 text-white" />
+      <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all duration-300 bg-gradient-to-br ${gradient} rounded-bl-3xl group-hover:scale-110`}>
+        <Icon className="h-14 w-14 text-white drop-shadow-lg" />
       </div>
 
-      <div className="relative z-10">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+      <div className="relative z-10 space-y-2">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Icon className="h-4 w-4" />
           <span className="text-sm font-medium">{title}</span>
         </div>
-        <div className="text-3xl font-bold tracking-tight mb-1">{value}</div>
+        <div className="text-3xl font-bold tracking-tight font-display">{value}</div>
         <div className={cn(
-          "text-xs font-medium flex items-center gap-1",
-          alert ? "text-red-500" : "text-emerald-500"
+          "text-sm font-medium flex items-center gap-1.5",
+          alert ? "text-red-500" : "text-emerald-600 dark:text-emerald-500"
         )}>
-          {alert ? <AlertTriangle className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
+          {alert ? <AlertTriangle className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
           {trend}
         </div>
       </div>

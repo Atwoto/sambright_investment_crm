@@ -107,7 +107,10 @@
     backdrop-filter: blur(12px);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
     transition-property: all;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 300ms;
@@ -115,9 +118,21 @@
   .dark .glass-card {
     background-color: rgba(31, 41, 55, 0.5);
     border-color: rgba(55, 65, 81, 0.3);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.3),
+      0 4px 6px -2px rgba(0, 0, 0, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
   }
   .glass-card:hover {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.15),
+      0 8px 10px -6px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+  }
+  .dark .glass-card:hover {
+    border-color: rgba(55, 65, 81, 0.5);
   }
 
   .glass-input {
@@ -153,6 +168,28 @@
     background-image: linear-gradient(to right, hsl(var(--secondary)), hsl(142, 40%, 60%));
   }
 
+  /* Background Gradients */
+  .bg-gradient-primary {
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(35, 85%, 55%));
+  }
+
+  .bg-gradient-secondary {
+    background-image: linear-gradient(to right, hsl(var(--secondary)), hsl(142, 40%, 60%));
+  }
+
+  /* Subtle Background Gradients */
+  .bg-gradient-subtle {
+    background: linear-gradient(to bottom right,
+      hsl(var(--primary) / 0.05),
+      hsl(var(--accent) / 0.05));
+  }
+
+  .dark .bg-gradient-subtle {
+    background: linear-gradient(to bottom right,
+      hsl(var(--primary) / 0.1),
+      hsl(var(--accent) / 0.1));
+  }
+
   /* Animations */
   .animate-enter {
     animation: enter 0.5s ease-out forwards;
@@ -167,5 +204,46 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* Custom Scrollbars */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+    border-radius: 10px;
+    opacity: 0.3;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    opacity: 0.5;
+  }
+
+  /* Custom scrollbar for dark mode */
+  .dark .scrollbar-thin {
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+  }
+
+  /* Font Display Class */
+  .font-display {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
   }
 }

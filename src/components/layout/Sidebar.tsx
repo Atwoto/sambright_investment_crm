@@ -62,36 +62,44 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, toggleCollapse, 
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          
+
           return (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`
-                w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group
-                ${isActive 
-                  ? 'bg-primary/10 text-primary shadow-sm' 
-                  : 'hover:bg-white/50 dark:hover:bg-gray-800/50 text-muted-foreground hover:text-foreground'
+                w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden
+                ${isActive
+                  ? 'bg-primary/15 text-primary shadow-lg shadow-primary/10 border border-primary/20'
+                  : 'hover:bg-white/60 dark:hover:bg-gray-800/60 text-muted-foreground hover:text-foreground hover:shadow-md'
                 }
                 ${item.highlight && !isActive ? 'text-gradient-primary font-medium' : ''}
               `}
             >
+              {/* Active indicator */}
+              {isActive && (
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
+              )}
+
               <div className={`
-                p-2 rounded-lg transition-colors
-                ${isActive ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-gray-800'}
+                p-2 rounded-lg transition-all duration-300
+                ${isActive
+                  ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105'
+                  : 'bg-gray-100/50 dark:bg-gray-800/50 group-hover:bg-gray-200/70 dark:group-hover:bg-gray-700/70 group-hover:scale-105'
+                }
               `}>
                 <Icon className="h-5 w-5" />
               </div>
-              
+
               <span className={`
                 font-medium whitespace-nowrap transition-all duration-300
                 ${isCollapsed ? 'opacity-0 w-0 translate-x-4' : 'opacity-100 translate-x-0'}
               `}>
                 {item.label}
               </span>
-              
+
               {isActive && !isCollapsed && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
+                <div className="ml-auto w-2 h-2 rounded-full bg-primary shadow-[0_0_12px_rgba(79,70,229,0.8)] animate-pulse" />
               )}
             </button>
           );
