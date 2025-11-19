@@ -7,7 +7,7 @@ const supabase = createClient(
   publicAnonKey
 );
 
-export type UserRole = 'admin' | 'staff' | 'client';
+export type UserRole = 'super_admin' | 'production' | 'field' | 'customer_service' | 'client';
 
 export interface User {
   id: string;
@@ -29,16 +29,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to convert Supabase user to our User type
-function convertSupabaseUser(supabaseUser: SupabaseUser | null): User | null {
-  if (!supabaseUser) return null;
-  
-  return {
-    id: supabaseUser.id,
-    email: supabaseUser.email || '',
-    name: supabaseUser.user_metadata?.name || '',
-    role: supabaseUser.user_metadata?.role || 'client'
-  };
+// Helper function to fetch user profile
+async function fetchUserProfile(userId: string): Promise<User | null> {
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error || !profile) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      email: profile.email || '',
+      name: profile.name || '',
+      role: profile.role as UserRole
+    };
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -46,16 +60,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(convertSupabaseUser(session?.user || null));
+    // Get initial session and fetch profile
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const userProfile = await fetchUserProfile(session.user.id);
+        setUser(userProfile);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(convertSupabaseUser(session?.user || null));
+        if (session?.user) {
+          const userProfile = await fetchUserProfile(session.user.id);
+          setUser(userProfile);
+        } else {
+          setUser(null);
+        }
         setLoading(false);
       }
     );
@@ -82,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string, role: UserRole = 'client') => {
     try {
-      // Use Supabase's built-in sign up method
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -98,11 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: error.message };
       }
 
-      // If sign up is successful, set the user state
-      if (data.user) {
-        setUser(convertSupabaseUser(data.user));
-      }
-
       return { success: true };
     } catch (error) {
       return { success: false, error: 'An unexpected error occurred' };
@@ -113,8 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const isAdmin = () => user?.role === 'admin';
-  const isStaff = () => user?.role === 'staff';
+  const isAdmin = () => user?.role === 'super_admin';
+  const isStaff = () => ['production', 'field', 'customer_service'].includes(user?.role || '');
   const isClient = () => user?.role === 'client';
 
   const value = {
