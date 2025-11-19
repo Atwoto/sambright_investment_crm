@@ -53,6 +53,7 @@
     "@tailwindcss/postcss": "^4.1.13",
     "@tailwindcss/vite": "^4.1.17",
     "@types/node": "^20.10.0",
+    "@vitejs/plugin-react": "^5.1.1",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "tailwindcss": "^4.1.17",
     "vite": "6.3.5"
