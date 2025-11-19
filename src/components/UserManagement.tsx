@@ -68,23 +68,42 @@ export function UserManagement() {
     try {
       setLoading(true);
 
-      // Get all users from auth.users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      // Get all profiles with auth data
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        return;
+      }
+
+      // Get auth data for last_sign_in_at
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
 
       if (authError) {
-        console.error('Error fetching users:', authError);
+        console.error('Error fetching auth data:', authError);
         return;
       }
 
       // Map to our user interface
-      const mappedUsers: User[] = authUsers.users.map(user => ({
-        id: user.id,
-        email: user.email || '',
-        name: user.user_metadata?.name || user.email?.split('@')[0] || 'Unknown',
-        role: user.user_metadata?.role || 'client',
-        created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at || undefined
-      }));
+      const mappedUsers: User[] = profiles.map(profile => {
+        const authUser = authData.users.find(u => u.id === profile.id);
+        // Normalize role to one of our allowed values
+        let role = profile.role as User['role'];
+        if (!['super_admin', 'production', 'field', 'customer_service', 'client'].includes(role)) {
+          role = 'client';
+        }
+        return {
+          id: profile.id,
+          email: profile.email || '',
+          name: profile.name || 'Unknown',
+          role,
+          created_at: profile.created_at,
+          last_sign_in_at: authUser?.last_sign_in_at || undefined
+        };
+      });
 
       setUsers(mappedUsers);
     } catch (error) {
@@ -104,16 +123,14 @@ export function UserManagement() {
     if (!selectedUser) return;
 
     try {
-      // Update user metadata
-      const { error } = await supabase.auth.admin.updateUserById(selectedUser.id, {
-        user_metadata: {
-          ...selectedUser,
-          role: newRole
-        }
-      });
+      // Update profile role in profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', selectedUser.id);
 
       if (error) {
-        console.error('Error updating user:', error);
+        console.error('Error updating profile:', error);
         return;
       }
 
@@ -137,6 +154,7 @@ export function UserManagement() {
     }
 
     try {
+      // Delete from auth.users (this should cascade to profiles due to FK constraint)
       const { error } = await supabase.auth.admin.deleteUser(userId);
 
       if (error) {
