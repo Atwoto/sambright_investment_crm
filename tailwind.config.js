@@ -9,16 +9,16 @@ export default {
             colors: {
                 border: "hsl(214.3, 31.8%, 91.4%)",
                 input: "hsl(214.3, 31.8%, 91.4%)",
-                ring: "hsl(262.1, 83.3%, 57.8%)",
+                ring: "hsl(250, 84%, 54%)",
                 background: "hsl(0, 0%, 100%)",
                 foreground: "hsl(222.2, 84%, 4.9%)",
                 primary: {
-                    DEFAULT: "hsl(262.1, 83.3%, 57.8%)",
+                    DEFAULT: "hsl(250, 84%, 54%)",
                     foreground: "hsl(210, 40%, 98%)",
                 },
                 secondary: {
-                    DEFAULT: "hsl(160, 60%, 45%)",
-                    foreground: "hsl(210, 40%, 98%)",
+                    DEFAULT: "hsl(35, 85%, 55%)",
+                    foreground: "hsl(0, 0%, 100%)",
                 },
                 destructive: {
                     DEFAULT: "hsl(0, 84.2%, 60.2%)",
@@ -29,8 +29,8 @@ export default {
                     foreground: "hsl(215.4, 16.3%, 46.9%)",
                 },
                 accent: {
-                    DEFAULT: "hsl(330, 70%, 60%)",
-                    foreground: "hsl(210, 40%, 98%)",
+                    DEFAULT: "hsl(142, 40%, 60%)",
+                    foreground: "hsl(0, 0%, 100%)",
                 },
                 popover: {
                     DEFAULT: "hsl(0, 0%, 100%)",

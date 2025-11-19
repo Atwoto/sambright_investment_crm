@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -13,27 +11,27 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Violet/Indigo Primary */
-    --primary: 262.1 83.3% 57.8%;
+    /* Deep Blue/Purple - Professional & Artistic */
+    --primary: 250 84% 54%;
     --primary-foreground: 210 40% 98%;
 
-    /* Teal/Emerald Secondary */
-    --secondary: 160 60% 45%;
-    --secondary-foreground: 210 40% 98%;
+    /* Warm Amber - Premium Art Supplies */
+    --secondary: 35 85% 55%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Pink/Rose Accent */
-    --accent: 330 70% 60%;
-    --accent-foreground: 210 40% 98%;
+    /* Soft Sage Green - Natural & Calming */
+    --accent: 142 40% 60%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 262.1 83.3% 57.8%;
+    --ring: 250 84% 54%;
 
     --radius: 0.75rem;
   }
@@ -48,24 +46,24 @@
     --popover: 222 47% 13%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 262.1 83.3% 57.8%;
+    --primary: 250 84% 65%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 160 50% 50%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 35 85% 60%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 330 70% 60%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 142 45% 55%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 262.1 83.3% 57.8%;
+    --ring: 250 84% 65%;
   }
 }
 
@@ -75,8 +73,8 @@
   }
 
   body {
-    background-color: red;
-    color: white;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: 'Inter', sans-serif;
   }
 
@@ -145,14 +143,14 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)));
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(35, 85%, 55%));
   }
 
   .text-gradient-secondary {
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    background-image: linear-gradient(to right, hsl(var(--secondary)), #2dd4bf);
+    background-image: linear-gradient(to right, hsl(var(--secondary)), hsl(142, 40%, 60%));
   }
 
   /* Animations */
