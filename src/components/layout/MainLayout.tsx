@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Button } from '../ui/button';
 import { Sun, Moon, Search, Bell } from 'lucide-react';
@@ -8,20 +9,21 @@ import { useAuth } from '../../contexts/AuthContext';
 interface MainLayoutProps {
   children: React.ReactNode;
   activeTab: string;
-  setActiveTab: (tab: string) => void;
+  navigate?: ReturnType<typeof useNavigate>;
 }
 
-export function MainLayout({ children, activeTab, setActiveTab }: MainLayoutProps) {
+export function MainLayout({ children, activeTab, navigate }: MainLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const routerNavigate = navigate || useNavigate();
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Sidebar */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <Sidebar
+        activeTab={activeTab}
+        navigate={routerNavigate}
         isCollapsed={isSidebarCollapsed}
         toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         signOut={signOut}

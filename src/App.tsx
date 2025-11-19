@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate, Routes, Route } from "react-router-dom";
 import {
   TrendingUp,
   Package,
@@ -32,7 +33,9 @@ import { useTheme } from "./contexts/ThemeContext";
 export default function App() {
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = location.pathname.slice(1) || "dashboard";
 
   // Show loading state while checking auth
   if (loading) {
@@ -101,16 +104,19 @@ export default function App() {
 
   // Admin/Staff Layout
   return (
-    <MainLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {activeTab === "dashboard" && <DashboardOverview />}
-      {activeTab === "products" && <ProductsManager />}
-      {activeTab === "clients" && <ClientsManager />}
-      {activeTab === "projects" && <ProjectsManager />}
-      {activeTab === "suppliers" && <SuppliersManager />}
-      {activeTab === "orders" && <OrdersManager />}
-      {activeTab === "inventory" && <InventoryTransactions />}
-      {activeTab === "ai-advisor" && <AIColorAdvisor />}
-      {activeTab === "reports" && <ReportsAnalytics />}
+    <MainLayout activeTab={activeTab} navigate={navigate}>
+      <Routes>
+        <Route path="/" element={<DashboardOverview />} />
+        <Route path="/dashboard" element={<DashboardOverview />} />
+        <Route path="/products" element={<ProductsManager />} />
+        <Route path="/clients" element={<ClientsManager />} />
+        <Route path="/projects" element={<ProjectsManager />} />
+        <Route path="/suppliers" element={<SuppliersManager />} />
+        <Route path="/orders" element={<OrdersManager />} />
+        <Route path="/inventory" element={<InventoryTransactions />} />
+        <Route path="/ai-advisor" element={<AIColorAdvisor />} />
+        <Route path="/reports" element={<ReportsAnalytics />} />
+      </Routes>
     </MainLayout>
   );
 }

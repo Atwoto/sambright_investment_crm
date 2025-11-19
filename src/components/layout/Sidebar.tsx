@@ -19,13 +19,13 @@ import { cn } from '../../lib/utils'; // Assuming you have a utils file, if not 
 
 interface SidebarProps {
   activeTab: string;
-  setActiveTab: (tab: string) => void;
+  navigate: (path: string) => void;
   isCollapsed: boolean;
   toggleCollapse: () => void;
   signOut: () => void;
 }
 
-export function Sidebar({ activeTab, setActiveTab, isCollapsed, toggleCollapse, signOut }: SidebarProps) {
+export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, signOut }: SidebarProps) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Products', icon: Package },
@@ -38,8 +38,28 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, toggleCollapse, 
     { id: 'reports', label: 'Reports', icon: FileBarChart },
   ];
 
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'products', label: 'Products', icon: Package },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'projects', label: 'Projects', icon: Palette },
+    { id: 'suppliers', label: 'Suppliers', icon: Brush },
+    { id: 'orders', label: 'Orders', icon: ShoppingCart },
+    { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'ai-advisor', label: 'AI Advisor', icon: Sparkles, highlight: true },
+    { id: 'reports', label: 'Reports', icon: FileBarChart },
+  ];
+
+  // Handle dashboard special case (both "/" and "/dashboard")
+  const getItemId = (itemId: string) => {
+    if (activeTab === '' || activeTab === '/') {
+      return itemId === 'dashboard' ? itemId : '';
+    }
+    return itemId;
+  };
+
   return (
-    <aside 
+    <aside
       className={`
         relative h-screen transition-all duration-300 ease-in-out border-r border-white/20 dark:border-gray-700/30
         ${isCollapsed ? 'w-20' : 'w-72'}
@@ -61,12 +81,12 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, toggleCollapse, 
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto scrollbar-hide">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = activeTab === item.id || (item.id === 'dashboard' && (activeTab === '' || activeTab === '/'));
 
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => navigate(`/${item.id}`)}
               className={`
                 w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden
                 ${isActive
