@@ -7,38 +7,38 @@ export default {
     theme: {
         extend: {
             colors: {
-                border: "hsl(var(--border))",
-                input: "hsl(var(--input))",
-                ring: "hsl(var(--ring))",
-                background: "hsl(var(--background))",
-                foreground: "hsl(var(--foreground))",
+                border: "hsl(214.3, 31.8%, 91.4%)",
+                input: "hsl(214.3, 31.8%, 91.4%)",
+                ring: "hsl(262.1, 83.3%, 57.8%)",
+                background: "hsl(0, 0%, 100%)",
+                foreground: "hsl(222.2, 84%, 4.9%)",
                 primary: {
-                    DEFAULT: "hsl(var(--primary))",
-                    foreground: "hsl(var(--primary-foreground))",
+                    DEFAULT: "hsl(262.1, 83.3%, 57.8%)",
+                    foreground: "hsl(210, 40%, 98%)",
                 },
                 secondary: {
-                    DEFAULT: "hsl(var(--secondary))",
-                    foreground: "hsl(var(--secondary-foreground))",
+                    DEFAULT: "hsl(160, 60%, 45%)",
+                    foreground: "hsl(210, 40%, 98%)",
                 },
                 destructive: {
-                    DEFAULT: "hsl(var(--destructive))",
-                    foreground: "hsl(var(--destructive-foreground))",
+                    DEFAULT: "hsl(0, 84.2%, 60.2%)",
+                    foreground: "hsl(210, 40%, 98%)",
                 },
                 muted: {
-                    DEFAULT: "hsl(var(--muted))",
-                    foreground: "hsl(var(--muted-foreground))",
+                    DEFAULT: "hsl(210, 40%, 96.1%)",
+                    foreground: "hsl(215.4, 16.3%, 46.9%)",
                 },
                 accent: {
-                    DEFAULT: "hsl(var(--accent))",
-                    foreground: "hsl(var(--accent-foreground))",
+                    DEFAULT: "hsl(330, 70%, 60%)",
+                    foreground: "hsl(210, 40%, 98%)",
                 },
                 popover: {
-                    DEFAULT: "hsl(var(--popover))",
-                    foreground: "hsl(var(--popover-foreground))",
+                    DEFAULT: "hsl(0, 0%, 100%)",
+                    foreground: "hsl(222.2, 84%, 4.9%)",
                 },
                 card: {
-                    DEFAULT: "hsl(var(--card))",
-                    foreground: "hsl(var(--card-foreground))",
+                    DEFAULT: "hsl(0, 0%, 100%)",
+                    foreground: "hsl(222.2, 84%, 4.9%)",
                 },
             },
             borderRadius: {
