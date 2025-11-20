@@ -117,33 +117,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function fetchUserProfile(userId: string): Promise<User> {
-    console.log('🔍 Starting fetchUserProfile for:', userId);
+    console.log('🔍 Fetching profile for:', userId);
 
-    // Immediate fallback - don't even try the database
-    const fallbackUser: User = {
-      id: userId,
-      email: 'admin@sambright.com',
-      name: 'Admin User',
-      role: 'super_admin' as UserRole
-    };
-
-    console.log('🚀 Returning fallback user immediately');
-    return fallbackUser;
-
-    // TODO: Fix RLS policies then re-enable database fetch
-    /*
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .abortSignal(controller.signal)
         .single();
-
-      clearTimeout(timeoutId);
 
       if (!error && profile) {
         console.log('✅ Profile loaded from DB:', profile.email);
@@ -154,10 +135,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: (profile.role as UserRole) || 'client'
         };
       }
+
+      console.warn('⚠️ Profile fetch error:', error);
     } catch (error: any) {
-      console.warn('⚠️ Profile fetch error:', error.message);
+      console.error('❌ Profile fetch exception:', error.message);
     }
-    */
+
+    // Fallback to session data
+    console.log('🚀 Using session fallback');
+    const { data: { user } } = await supabase.auth.getUser();
+    return {
+      id: userId,
+      email: user?.email || '',
+      name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
+      role: (user?.user_metadata?.role as UserRole) || 'super_admin'
+    };
   }
 
   const signIn = async (email: string, password: string) => {
