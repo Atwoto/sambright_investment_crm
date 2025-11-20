@@ -25,6 +25,8 @@ export default function App() {
   const navigate = useNavigate();
   const activeTab = location.pathname.slice(1) || "dashboard";
 
+  console.log('App render:', { user: !!user, loading, pathname: location.pathname });
+
   // Show loading state while checking auth
   if (loading) {
     return (
@@ -36,8 +38,11 @@ export default function App() {
 
   // Show login page if user is not authenticated
   if (!user) {
+    console.log('No user, showing login');
     return <Login />;
   }
+
+  console.log('User authenticated, role:', user.role);
 
   // Show customer portal for clients
   if (user.role === "client") {
