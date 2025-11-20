@@ -28,42 +28,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session and fetch profile
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const userProfile = await fetchUserProfile(session.user.id);
-        setUser(userProfile);
-      } else {
-        setUser(null);
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        if (error) {
+          console.error('Session error:', error);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          const userProfile = await fetchUserProfile(session.user.id);
+          if (mounted) {
+            setUser(userProfile);
+            setLoading(false);
+          }
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Init auth error:', error);
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    };
+
+    initAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          const userProfile = await fetchUserProfile(session.user.id);
-          setUser(userProfile);
-        } else {
-          setUser(null);
+        console.log('Auth state changed:', event);
+        
+        if (!mounted) return;
+
+        try {
+          if (session?.user) {
+            const userProfile = await fetchUserProfile(session.user.id);
+            if (mounted) {
+              setUser(userProfile);
+              setLoading(false);
+            }
+          } else {
+            setUser(null);
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error('Auth change error:', error);
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
         }
-        setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function fetchUserProfile(userId: string): Promise<User | null> {
     try {
       console.log('Fetching profile for user:', userId);
 
-      const { data: profile, error } = await supabase
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+      );
+
+      const fetchPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+
+      const { data: profile, error } = await Promise.race([
+        fetchPromise,
+        timeoutPromise
+      ]) as any;
 
       console.log('Profile fetch result:', { data: profile, error });
 
@@ -99,13 +153,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Exception in fetchUserProfile:', error);
       // Return a basic user object instead of null
-      const { data: { user } } = await supabase.auth.getUser();
-      return {
-        id: userId,
-        email: user?.email || '',
-        name: user?.user_metadata?.name || 'User',
-        role: 'client' as UserRole
-      };
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        return {
+          id: userId,
+          email: user?.email || '',
+          name: user?.user_metadata?.name || 'User',
+          role: 'client' as UserRole
+        };
+      } catch (innerError) {
+        console.error('Failed to get fallback user:', innerError);
+        return {
+          id: userId,
+          email: '',
+          name: 'User',
+          role: 'client' as UserRole
+        };
+      }
     }
   }
 
