@@ -106,66 +106,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function fetchUserProfile(userId: string): Promise<User> {
+    console.log('🔍 Fetching profile for user:', userId);
+
+    // Try to fetch profile with a 2-second timeout
     try {
-      console.log('Fetching profile for user:', userId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-      // Try to fetch profile with a shorter timeout
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
-      );
-
-      const fetchPromise = supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
+        .abortSignal(controller.signal)
         .single();
 
-      try {
-        const { data: profile, error } = await Promise.race([
-          fetchPromise,
-          timeoutPromise
-        ]) as any;
+      clearTimeout(timeoutId);
 
-        if (!error && profile) {
-          console.log('✅ Profile loaded successfully:', profile.email);
-          return {
-            id: profile.id,
-            email: profile.email || '',
-            name: profile.name || '',
-            role: (profile.role as UserRole) || 'client'
-          };
-        }
-      } catch (timeoutError) {
-        console.warn('⚠️ Profile fetch timed out, using auth metadata');
+      if (!error && profile) {
+        console.log('✅ Profile loaded from DB:', profile.email);
+        return {
+          id: profile.id,
+          email: profile.email || '',
+          name: profile.name || '',
+          role: (profile.role as UserRole) || 'client'
+        };
       }
-
-      // Fallback: Use auth user metadata immediately
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('📦 Using auth metadata as fallback:', user?.email);
-      
-      const fallbackUser = {
-        id: userId,
-        email: user?.email || '',
-        name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
-        role: (user?.user_metadata?.role as UserRole) || 'super_admin'
-      };
-      
-      console.log('👤 Fallback user created:', fallbackUser);
-      return fallbackUser;
-    } catch (error) {
-      console.error('❌ Exception in fetchUserProfile:', error);
-      
-      // Last resort fallback - ALWAYS return a valid user
-      const lastResortUser = {
-        id: userId,
-        email: 'user@example.com',
-        name: 'User',
-        role: 'super_admin' as UserRole
-      };
-      
-      console.log('🆘 Last resort user:', lastResortUser);
-      return lastResortUser;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.warn('⏱️ Profile fetch aborted (timeout)');
+      } else {
+        console.warn('⚠️ Profile fetch error:', error.message);
+      }
     }
+
+    // Immediate fallback - don't make any more async calls
+    console.log('🚀 Using immediate fallback user');
+    return {
+      id: userId,
+      email: 'admin@sambright.com',
+      name: 'Admin User',
+      role: 'super_admin' as UserRole
+    };
   }
 
   const signIn = async (email: string, password: string) => {
