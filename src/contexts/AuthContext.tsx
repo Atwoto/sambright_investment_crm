@@ -46,11 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           const userProfile = await fetchUserProfile(session.user.id);
-          if (mounted) {
+          console.log('🎯 Setting user in initAuth:', userProfile);
+          if (mounted && userProfile) {
             setUser(userProfile);
-            setLoading(false);
+            console.log('✅ User set successfully');
           }
+          setLoading(false);
         } else {
+          console.log('❌ No session found');
           setUser(null);
           setLoading(false);
         }
@@ -75,11 +78,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           if (session?.user) {
             const userProfile = await fetchUserProfile(session.user.id);
-            if (mounted) {
+            console.log('🎯 Setting user in auth change:', userProfile);
+            if (mounted && userProfile) {
               setUser(userProfile);
-              setLoading(false);
+              console.log('✅ User set successfully in auth change');
             }
+            setLoading(false);
           } else {
+            console.log('❌ No session in auth change');
             setUser(null);
             setLoading(false);
           }
