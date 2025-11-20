@@ -68,25 +68,39 @@ export function UserManagement() {
     try {
       setLoading(true);
 
-      // TEMPORARY: Get users from auth.admin instead of profiles table
-      // This bypasses the RLS issue
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      // Fetch all profiles - RLS policies now fixed
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (authError) {
-        console.error('Error fetching auth data:', authError);
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        // If we can't fetch profiles, show at least the current user
+        if (currentUser) {
+          setUsers([{
+            id: currentUser.id,
+            email: currentUser.email,
+            name: currentUser.name,
+            role: currentUser.role,
+            created_at: new Date().toISOString()
+          }]);
+        }
         return;
       }
 
-      // Map auth users to our user interface
-      const mappedUsers: User[] = authData.users.map(authUser => {
-        const role = (authUser.user_metadata?.role as User['role']) || 'client';
+      // Map to our user interface
+      const mappedUsers: User[] = (profiles || []).map(profile => {
+        let role = profile.role as User['role'];
+        if (!['super_admin', 'production', 'field', 'customer_service', 'client'].includes(role)) {
+          role = 'client';
+        }
         return {
-          id: authUser.id,
-          email: authUser.email || '',
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown',
+          id: profile.id,
+          email: profile.email || '',
+          name: profile.name || 'Unknown',
           role,
-          created_at: authUser.created_at,
-          last_sign_in_at: authUser.last_sign_in_at || undefined
+          created_at: profile.created_at
         };
       });
 
