@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { ProductsManager } from "./components/ProductsManager";
@@ -13,8 +13,10 @@ import { AIColorAdvisor } from "./components/AIColorAdvisor";
 import { UserManagement } from "./components/UserManagement";
 
 export default function App() {
+  const navigate = useNavigate();
+
   return (
-    <MainLayout activeTab="dashboard" navigate={() => {}}>
+    <MainLayout activeTab={window.location.pathname.slice(1) || "dashboard"} navigate={navigate}>
       <Routes>
         <Route path="/" element={<DashboardOverview />} />
         <Route path="/dashboard" element={<DashboardOverview />} />
