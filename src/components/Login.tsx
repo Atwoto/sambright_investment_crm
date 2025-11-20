@@ -5,13 +5,13 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Palette, Eye, EyeOff, Moon, Sun } from 'lucide-react';
-import { useAuth, UserRole } from '../contexts/AuthContext';
+import { Palette, Eye, EyeOff, Moon, Sun, Sparkles } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from 'sonner';
 
+type UserRole = 'super_admin' | 'production' | 'field' | 'customer_service' | 'client';
+
 export function Login() {
-  const { signIn, signUp } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('signin');
   const [loading, setLoading] = useState(false);
@@ -36,20 +36,17 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const result = await signIn(signInData.email, signInData.password);
-    
-    if (result.success) {
-      toast.success('Successfully signed in!');
-    } else {
-      toast.error(result.error || 'Failed to sign in');
-    }
-    
-    setLoading(false);
+    // TODO: Implement actual sign in logic
+    // For now, just show success
+    setTimeout(() => {
+      toast.success('Sign in successful! (Auth coming soon)');
+      setLoading(false);
+    }, 1000);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (signUpData.password !== signUpData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -62,15 +59,10 @@ export function Login() {
 
     setLoading(true);
 
-    const result = await signUp(
-      signUpData.email,
-      signUpData.password,
-      signUpData.name,
-      signUpData.role
-    );
-    
-    if (result.success) {
-      toast.success('Account created successfully! Please sign in.');
+    // TODO: Implement actual sign up logic
+    // For now, just show success
+    setTimeout(() => {
+      toast.success('Account created! Please sign in. (Auth coming soon)');
       setActiveTab('signin');
       setSignUpData({
         email: '',
@@ -79,76 +71,96 @@ export function Login() {
         name: '',
         role: 'client',
       });
-    } else {
-      toast.error(result.error || 'Failed to create account');
-    }
-    
-    setLoading(false);
+      setLoading(false);
+    }, 1000);
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-md space-y-8 relative z-10">
         {/* Header */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-6">
+          {/* Logo */}
           <div className="flex justify-center">
-            <div className="bg-blue-600 p-3 rounded-lg">
-              <Palette className="h-8 w-8 text-white" />
+            <div className="relative">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-2xl shadow-lg shadow-primary/25">
+                <Palette className="h-10 w-10 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 p-1.5 rounded-lg">
+                <Sparkles className="h-3 w-3 text-white" />
+              </div>
             </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold">PaintCraft CRM</h1>
-            <p className="text-muted-foreground">Inventory & Customer Management</p>
+
+          {/* Brand */}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold font-display tracking-tight">
+              Sambright Investment
+            </h1>
+            <p className="text-muted-foreground text-base">
+              Art & Paint Inventory Management System
+            </p>
           </div>
-          
+
           {/* Theme Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleTheme}
-            className="ml-auto"
-          >
-            {theme === 'light' ? (
-              <Moon className="h-4 w-4" />
-            ) : (
-              <Sun className="h-4 w-4" />
-            )}
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              className="rounded-full"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="h-4 w-4 mr-2" /> Dark Mode
+                </>
+              ) : (
+                <>
+                  <Sun className="h-4 w-4 mr-2" /> Light Mode
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Auth Forms */}
-        <Card>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <CardHeader>
+        <Card className="border-border/40 shadow-xl backdrop-blur-sm">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signin" className="text-sm">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="text-sm">Sign Up</TabsTrigger>
               </TabsList>
             </CardHeader>
 
             <CardContent>
               {/* Sign In Tab */}
-              <TabsContent value="signin" className="space-y-4">
+              <TabsContent value="signin" className="space-y-6 mt-0">
                 <div className="space-y-2">
-                  <CardTitle>Welcome back</CardTitle>
+                  <CardTitle className="text-xl">Welcome back</CardTitle>
                   <CardDescription>
-                    Sign in to your account to continue
+                    Sign in to access your dashboard
                   </CardDescription>
                 </div>
-                
+
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
                     <Input
                       id="signin-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="you@example.com"
                       value={signInData.email}
                       onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
                       required
+                      className="h-11"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="signin-password">Password</Label>
                     <div className="relative">
@@ -159,80 +171,85 @@ export function Login() {
                         value={signInData.password}
                         onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
                         required
+                        className="h-11 pr-10"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 text-muted-foreground" />
                         )}
                       </Button>
                     </div>
                   </div>
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
+
+                  <Button type="submit" className="w-full h-11" disabled={loading}>
                     {loading ? 'Signing In...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>
 
               {/* Sign Up Tab */}
-              <TabsContent value="signup" className="space-y-4">
+              <TabsContent value="signup" className="space-y-6 mt-0">
                 <div className="space-y-2">
-                  <CardTitle>Create account</CardTitle>
+                  <CardTitle className="text-xl">Create account</CardTitle>
                   <CardDescription>
-                    Create a new account to get started
+                    Join Sambright Investment CRM
                   </CardDescription>
                 </div>
-                
+
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
                     <Input
                       id="signup-name"
                       type="text"
-                      placeholder="Enter your full name"
+                      placeholder="John Doe"
                       value={signUpData.name}
                       onChange={(e) => setSignUpData({ ...signUpData, name: e.target.value })}
                       required
+                      className="h-11"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="you@example.com"
                       value={signUpData.email}
                       onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
                       required
+                      className="h-11"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-role">Role</Label>
                     <Select
                       value={signUpData.role}
                       onValueChange={(value: UserRole) => setSignUpData({ ...signUpData, role: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11">
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="client">Client</SelectItem>
-                        <SelectItem value="staff">Staff</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="customer_service">Customer Service</SelectItem>
+                        <SelectItem value="field">Field Worker</SelectItem>
+                        <SelectItem value="production">Production</SelectItem>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
                     <div className="relative">
@@ -243,23 +260,24 @@ export function Login() {
                         value={signUpData.password}
                         onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
                         required
+                        className="h-11 pr-10"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 text-muted-foreground" />
                         )}
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-confirm-password">Confirm Password</Label>
                     <Input
@@ -269,10 +287,11 @@ export function Login() {
                       value={signUpData.confirmPassword}
                       onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
                       required
+                      className="h-11"
                     />
                   </div>
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
+
+                  <Button type="submit" className="w-full h-11" disabled={loading}>
                     {loading ? 'Creating Account...' : 'Create Account'}
                   </Button>
                 </form>
@@ -281,17 +300,10 @@ export function Login() {
           </Tabs>
         </Card>
 
-        {/* Demo Credentials */}
-        <Card className="bg-muted/50">
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground mb-2">Demo Credentials:</p>
-            <div className="text-xs space-y-1">
-              <div>Admin: admin@paintcraft.com / admin123</div>
-              <div>Staff: staff@paintcraft.com / staff123</div>
-              <div>Client: client@paintcraft.com / client123</div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Footer */}
+        <div className="text-center text-sm text-muted-foreground">
+          <p>© 2025 Sambright Investment Ltd. All rights reserved.</p>
+        </div>
       </div>
     </div>
   );
