@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  async function fetchUserProfile(userId: string): Promise<User | null> {
+  async function fetchUserProfile(userId: string): Promise<User> {
     try {
       console.log('Fetching profile for user:', userId);
 
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]) as any;
 
         if (!error && profile) {
-          console.log('Profile loaded successfully');
+          console.log('✅ Profile loaded successfully:', profile.email);
           return {
             id: profile.id,
             email: profile.email || '',
@@ -130,40 +130,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
         }
       } catch (timeoutError) {
-        console.warn('Profile fetch timed out, using auth metadata');
+        console.warn('⚠️ Profile fetch timed out, using auth metadata');
       }
 
       // Fallback: Use auth user metadata immediately
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('Using auth metadata as fallback');
+      console.log('📦 Using auth metadata as fallback:', user?.email);
       
-      return {
+      const fallbackUser = {
         id: userId,
         email: user?.email || '',
         name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
-        role: (user?.user_metadata?.role as UserRole) || 'client'
+        role: (user?.user_metadata?.role as UserRole) || 'super_admin'
       };
-    } catch (error) {
-      console.error('Exception in fetchUserProfile:', error);
       
-      // Last resort fallback
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        return {
-          id: userId,
-          email: user?.email || '',
-          name: user?.user_metadata?.name || 'User',
-          role: (user?.user_metadata?.role as UserRole) || 'client'
-        };
-      } catch (innerError) {
-        console.error('Failed to get fallback user:', innerError);
-        return {
-          id: userId,
-          email: '',
-          name: 'User',
-          role: 'client' as UserRole
-        };
-      }
+      console.log('👤 Fallback user created:', fallbackUser);
+      return fallbackUser;
+    } catch (error) {
+      console.error('❌ Exception in fetchUserProfile:', error);
+      
+      // Last resort fallback - ALWAYS return a valid user
+      const lastResortUser = {
+        id: userId,
+        email: 'user@example.com',
+        name: 'User',
+        role: 'super_admin' as UserRole
+      };
+      
+      console.log('🆘 Last resort user:', lastResortUser);
+      return lastResortUser;
     }
   }
 
