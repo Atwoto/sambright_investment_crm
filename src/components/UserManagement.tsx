@@ -130,6 +130,7 @@ export function UserManagement() {
 
       if (error) {
         console.error('Error updating profile:', error);
+        alert('Failed to update role. Please try again.');
         return;
       }
 
@@ -142,8 +143,11 @@ export function UserManagement() {
 
       setIsEditDialogOpen(false);
       setSelectedUser(null);
+      
+      alert('Role updated successfully! Note: User will see the new role after they log out and log back in.');
     } catch (error) {
       console.error('Error updating user role:', error);
+      alert('Failed to update role. Please try again.');
     }
   };
 
