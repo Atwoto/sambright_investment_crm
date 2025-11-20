@@ -49,7 +49,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "../utils/currency";
-import { useAuth } from "../contexts/AuthContext";
 import { cn } from "../lib/utils";
 import {
   DropdownMenu,
@@ -81,7 +80,6 @@ interface Project {
 }
 
 export function ProjectsManager() {
-  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [projects, setProjects] = useState<Project[]>([]);

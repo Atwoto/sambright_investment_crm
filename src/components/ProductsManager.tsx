@@ -44,7 +44,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "../utils/currency";
-import { useAuth } from "../contexts/AuthContext";
 import { cn } from "../lib/utils";
 import {
   DropdownMenu,
@@ -84,7 +83,6 @@ interface Painting {
 }
 
 export function ProductsManager() {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("paints");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
