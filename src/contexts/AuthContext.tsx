@@ -57,14 +57,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function fetchUserProfile(userId: string): Promise<User | null> {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      console.log('Fetching profile for user:', userId);
 
-      if (error || !profile) {
-        console.error('Error fetching profile:', error);
+      // Add retry logic with delay
+      let retries = 3;
+      let profile = null;
+
+      while (retries > 0 && !profile) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        console.log('Profile fetch result:', { data, error });
+
+        if (error) {
+          console.error('Error fetching profile (attempt', retries, '):', error);
+          retries--;
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          continue;
+        }
+
+        profile = data;
+      }
+
+      if (!profile) {
+        console.error('Failed to fetch profile after all retries');
         return null;
       }
 
@@ -75,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: (profile.role as UserRole) || 'client'
       };
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Exception in fetchUserProfile:', error);
       return null;
     }
   }
