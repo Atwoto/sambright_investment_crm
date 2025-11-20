@@ -28,6 +28,7 @@ import {
 } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/currency";
 import { toast } from "sonner";
 import {
@@ -80,6 +81,7 @@ interface InventoryTransaction {
 }
 
 export function InventoryTransactions() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedDateRange, setSelectedDateRange] = useState("all");

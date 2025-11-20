@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
-// Auth temporarily removed for debugging
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -27,8 +27,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, signOut }: SidebarProps) {
-  // Placeholder user (no auth)
-  const user = { name: 'Admin User', role: 'super_admin' };
+  const { user } = useAuth();
 
   const baseNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

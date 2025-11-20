@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabase/client';
 
 interface User {
@@ -51,6 +52,7 @@ const roleColors = {
 };
 
 export function UserManagement() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -180,22 +182,21 @@ export function UserManagement() {
       .slice(0, 2);
   };
 
-  // Auth check temporarily removed for debugging
-  // if (currentUser?.role !== 'super_admin') {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-[400px]">
-  //       <Card className="w-full max-w-md">
-  //         <CardHeader className="text-center">
-  //           <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-  //           <CardTitle>Access Denied</CardTitle>
-  //           <CardDescription>
-  //             You don't have permission to access user management.
-  //           </CardDescription>
-  //         </CardHeader>
-  //       </Card>
-  //     </div>
-  //   );
-  // }
+  if (currentUser?.role !== 'super_admin') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You don't have permission to access user management.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-enter">

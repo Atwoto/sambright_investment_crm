@@ -7,11 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Palette, Eye, EyeOff, Moon, Sun, Sparkles } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth, UserRole } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
-type UserRole = 'super_admin' | 'production' | 'field' | 'customer_service' | 'client';
-
 export function Login() {
+  const { signIn, signUp } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('signin');
   const [loading, setLoading] = useState(false);
@@ -36,12 +36,15 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
 
-    // TODO: Implement actual sign in logic
-    // For now, just show success
-    setTimeout(() => {
-      toast.success('Sign in successful! (Auth coming soon)');
-      setLoading(false);
-    }, 1000);
+    const result = await signIn(signInData.email, signInData.password);
+
+    if (result.success) {
+      toast.success('Successfully signed in!');
+    } else {
+      toast.error(result.error || 'Failed to sign in');
+    }
+
+    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -59,10 +62,15 @@ export function Login() {
 
     setLoading(true);
 
-    // TODO: Implement actual sign up logic
-    // For now, just show success
-    setTimeout(() => {
-      toast.success('Account created! Please sign in. (Auth coming soon)');
+    const result = await signUp(
+      signUpData.email,
+      signUpData.password,
+      signUpData.name,
+      signUpData.role
+    );
+
+    if (result.success) {
+      toast.success('Account created successfully! Please sign in.');
       setActiveTab('signin');
       setSignUpData({
         email: '',
@@ -71,8 +79,11 @@ export function Login() {
         name: '',
         role: 'client',
       });
-      setLoading(false);
-    }, 1000);
+    } else {
+      toast.error(result.error || 'Failed to create account');
+    }
+
+    setLoading(false);
   };
 
   return (
