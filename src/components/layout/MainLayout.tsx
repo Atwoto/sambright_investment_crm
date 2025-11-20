@@ -4,7 +4,6 @@ import { Sidebar } from './Sidebar';
 import { Button } from '../ui/button';
 import { Sun, Moon, Search, Bell } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -15,8 +14,11 @@ interface MainLayoutProps {
 export function MainLayout({ children, activeTab, navigate }: MainLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const { user, signOut } = useAuth();
   const routerNavigate = navigate || useNavigate();
+
+  // Placeholder user data (no auth)
+  const user = { name: 'Admin User', role: 'super_admin' };
+  const signOut = () => {};
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
