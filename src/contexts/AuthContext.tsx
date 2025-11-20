@@ -108,12 +108,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function fetchUserProfile(userId: string): Promise<User> {
     console.log('🔍 Fetching profile for:', userId);
 
+    // Try database with 2 second timeout
     try {
-      const { data: profile, error } = await supabase
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 2000)
+      );
+
+      const fetchPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+
+      const { data: profile, error } = await Promise.race([
+        fetchPromise,
+        timeoutPromise
+      ]) as any;
 
       if (!error && profile) {
         console.log('✅ Profile loaded from DB:', profile.email);
@@ -127,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.warn('⚠️ Profile fetch error:', error);
     } catch (error: any) {
-      console.error('❌ Profile fetch exception:', error.message);
+      console.warn('⏱️ Profile fetch timeout or error:', error.message);
     }
 
     // Fallback to session data
