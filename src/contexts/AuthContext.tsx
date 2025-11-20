@@ -35,15 +35,19 @@ async function fetchUserProfile(userId: string): Promise<User | null> {
       .eq('id', userId)
       .single();
 
+    console.log('Profile fetch result:', { profile, error });
+
     if (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error fetching profile:', error.message, error.details, error.hint);
       return null;
     }
 
     if (!profile) {
-      console.warn('No profile found');
+      console.warn('No profile found for user:', userId);
       return null;
     }
+
+    console.log('Profile data:', profile);
 
     return {
       id: profile.id,
@@ -52,7 +56,7 @@ async function fetchUserProfile(userId: string): Promise<User | null> {
       role: (profile.role as UserRole) || 'client'
     };
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error('Exception fetching user profile:', error);
     return null;
   }
 }
