@@ -65,7 +65,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session and fetch profile
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const userProfile = await fetchUserProfile(session.user.id);
+        let retries = 3;
+        let userProfile = null;
+
+        // Retry fetching profile up to 3 times
+        while (retries > 0 && !userProfile) {
+          userProfile = await fetchUserProfile(session.user.id);
+          if (!userProfile) {
+            console.log(`Profile fetch failed, retrying... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            retries--;
+          }
+        }
+
         setUser(userProfile);
       } else {
         setUser(null);
@@ -77,7 +89,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          const userProfile = await fetchUserProfile(session.user.id);
+          let retries = 3;
+          let userProfile = null;
+
+          // Retry fetching profile up to 3 times
+          while (retries > 0 && !userProfile) {
+            userProfile = await fetchUserProfile(session.user.id);
+            if (!userProfile) {
+              console.log(`Profile fetch failed, retrying... (${retries} attempts left)`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+            }
+          }
+
           setUser(userProfile);
         } else {
           setUser(null);
