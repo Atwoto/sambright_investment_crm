@@ -68,18 +68,8 @@ export function UserManagement() {
     try {
       setLoading(true);
 
-      // Get all profiles with auth data
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        return;
-      }
-
-      // Get auth data for last_sign_in_at
+      // TEMPORARY: Get users from auth.admin instead of profiles table
+      // This bypasses the RLS issue
       const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
 
       if (authError) {
@@ -87,21 +77,16 @@ export function UserManagement() {
         return;
       }
 
-      // Map to our user interface
-      const mappedUsers: User[] = profiles.map(profile => {
-        const authUser = authData.users.find(u => u.id === profile.id);
-        // Normalize role to one of our allowed values
-        let role = profile.role as User['role'];
-        if (!['super_admin', 'production', 'field', 'customer_service', 'client'].includes(role)) {
-          role = 'client';
-        }
+      // Map auth users to our user interface
+      const mappedUsers: User[] = authData.users.map(authUser => {
+        const role = (authUser.user_metadata?.role as User['role']) || 'client';
         return {
-          id: profile.id,
-          email: profile.email || '',
-          name: profile.name || 'Unknown',
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown',
           role,
-          created_at: profile.created_at,
-          last_sign_in_at: authUser?.last_sign_in_at || undefined
+          created_at: authUser.created_at,
+          last_sign_in_at: authUser.last_sign_in_at || undefined
         };
       });
 
