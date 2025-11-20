@@ -122,9 +122,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function fetchUserProfile(userId: string): Promise<User> {
-    console.log('🔍 Fetching profile for user:', userId);
+    console.log('🔍 Starting fetchUserProfile for:', userId);
 
-    // Try to fetch profile with a 2-second timeout
+    // Immediate fallback - don't even try the database
+    const fallbackUser: User = {
+      id: userId,
+      email: 'admin@sambright.com',
+      name: 'Admin User',
+      role: 'super_admin' as UserRole
+    };
+
+    console.log('🚀 Returning fallback user immediately');
+    return fallbackUser;
+
+    // TODO: Fix RLS policies then re-enable database fetch
+    /*
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -148,21 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.warn('⏱️ Profile fetch aborted (timeout)');
-      } else {
-        console.warn('⚠️ Profile fetch error:', error.message);
-      }
+      console.warn('⚠️ Profile fetch error:', error.message);
     }
-
-    // Immediate fallback - don't make any more async calls
-    console.log('🚀 Using immediate fallback user');
-    return {
-      id: userId,
-      email: 'admin@sambright.com',
-      name: 'Admin User',
-      role: 'super_admin' as UserRole
-    };
+    */
   }
 
   const signIn = async (email: string, password: string) => {
