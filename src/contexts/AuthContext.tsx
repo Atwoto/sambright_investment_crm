@@ -45,17 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          // Use session data directly - no database call
-          console.log('🎯 Creating user from session data');
-          const quickUser: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
-          };
-          console.log('✅ User created from session:', quickUser);
+          // Fetch profile from database (RLS is now fixed)
+          const userProfile = await fetchUserProfile(session.user.id);
+          console.log('✅ User profile loaded:', userProfile);
           if (mounted) {
-            setUser(quickUser);
+            setUser(userProfile);
           }
           setLoading(false);
         } else {
@@ -83,16 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           if (session?.user) {
-            // Use session data directly - no database call
-            const quickUser: User = {
-              id: session.user.id,
-              email: session.user.email || '',
-              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-              role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
-            };
-            console.log('🎯 User from auth change:', quickUser);
+            // Fetch profile from database (RLS is now fixed)
+            const userProfile = await fetchUserProfile(session.user.id);
+            console.log('🎯 User from auth change:', userProfile);
             if (mounted) {
-              setUser(quickUser);
+              setUser(userProfile);
             }
             setLoading(false);
           } else {
