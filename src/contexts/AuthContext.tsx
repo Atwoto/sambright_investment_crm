@@ -59,29 +59,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId);
 
-      // Add retry logic with delay
+      // Add retry logic with delay and timeout
       let retries = 3;
       let profile = null;
 
       while (retries > 0 && !profile) {
-        const { data, error } = await supabase
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Query timeout')), 5000)
+        );
+
+        const queryPromise = supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .single();
 
-        console.log('Profile fetch result:', { data, error });
+        try {
+          const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-        if (error) {
-          console.error('Error fetching profile (attempt', retries, '):', error);
+          console.log('Profile fetch result:', { data, error });
+
+          if (error) {
+            console.error('Error fetching profile (attempt', retries, '):', error);
+            retries--;
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            continue;
+          }
+
+          profile = data;
+        } catch (err) {
+          console.error('Query failed or timed out:', err);
           retries--;
           if (retries > 0) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
-          continue;
         }
-
-        profile = data;
       }
 
       if (!profile) {
