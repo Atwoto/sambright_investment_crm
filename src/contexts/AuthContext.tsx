@@ -144,13 +144,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Fallback to session data
     console.log('🚀 Using session fallback');
-    const { data: { user } } = await supabase.auth.getUser();
-    return {
-      id: userId,
-      email: user?.email || '',
-      name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
-      role: (user?.user_metadata?.role as UserRole) || 'super_admin'
-    };
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const fallbackUser = {
+        id: userId,
+        email: user?.email || 'user@example.com',
+        name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
+        role: (user?.user_metadata?.role as UserRole) || 'super_admin'
+      };
+      console.log('✅ Fallback user created:', fallbackUser);
+      return fallbackUser;
+    } catch (err) {
+      console.error('❌ Session fallback failed:', err);
+      // Last resort - return a valid user object
+      return {
+        id: userId,
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'super_admin' as UserRole
+      };
+    }
   }
 
   const signIn = async (email: string, password: string) => {
