@@ -103,9 +103,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId);
 
-      // Add timeout to prevent hanging
+      // Try to fetch profile with a shorter timeout
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
       );
 
       const fetchPromise = supabase
@@ -114,52 +114,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      const { data: profile, error } = await Promise.race([
-        fetchPromise,
-        timeoutPromise
-      ]) as any;
+      try {
+        const { data: profile, error } = await Promise.race([
+          fetchPromise,
+          timeoutPromise
+        ]) as any;
 
-      console.log('Profile fetch result:', { data: profile, error });
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        // Return a basic user object instead of null
-        const { data: { user } } = await supabase.auth.getUser();
-        return {
-          id: userId,
-          email: user?.email || '',
-          name: user?.user_metadata?.name || 'User',
-          role: 'client' as UserRole
-        };
+        if (!error && profile) {
+          console.log('Profile loaded successfully');
+          return {
+            id: profile.id,
+            email: profile.email || '',
+            name: profile.name || '',
+            role: (profile.role as UserRole) || 'client'
+          };
+        }
+      } catch (timeoutError) {
+        console.warn('Profile fetch timed out, using auth metadata');
       }
 
-      if (!profile) {
-        console.warn('No profile found, using default');
-        const { data: { user } } = await supabase.auth.getUser();
-        return {
-          id: userId,
-          email: user?.email || '',
-          name: user?.user_metadata?.name || 'User',
-          role: 'client' as UserRole
-        };
-      }
-
+      // Fallback: Use auth user metadata immediately
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Using auth metadata as fallback');
+      
       return {
-        id: profile.id,
-        email: profile.email || '',
-        name: profile.name || '',
-        role: (profile.role as UserRole) || 'client'
+        id: userId,
+        email: user?.email || '',
+        name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'User',
+        role: (user?.user_metadata?.role as UserRole) || 'client'
       };
     } catch (error) {
       console.error('Exception in fetchUserProfile:', error);
-      // Return a basic user object instead of null
+      
+      // Last resort fallback
       try {
         const { data: { user } } = await supabase.auth.getUser();
         return {
           id: userId,
           email: user?.email || '',
           name: user?.user_metadata?.name || 'User',
-          role: 'client' as UserRole
+          role: (user?.user_metadata?.role as UserRole) || 'client'
         };
       } catch (innerError) {
         console.error('Failed to get fallback user:', innerError);

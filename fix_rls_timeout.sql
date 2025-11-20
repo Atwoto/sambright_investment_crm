@@ -9,6 +9,9 @@ DROP POLICY IF EXISTS "Enable delete for super admins only" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 
+-- Drop if exists and recreate
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
+
 -- Create a simple SELECT policy without circular dependency
 -- Users can ONLY read their own profile (no super admin check that causes timeout)
 CREATE POLICY "profiles_select_own" ON public.profiles
