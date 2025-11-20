@@ -59,48 +59,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching profile for user:', userId);
 
-      // Add retry logic with delay and timeout
-      let retries = 3;
-      let profile = null;
+      // Single attempt with timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Query timeout')), 3000)
+      );
 
-      while (retries > 0 && !profile) {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Query timeout')), 5000)
-        );
+      const queryPromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-        const queryPromise = supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+      const { data: profile, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-        try {
-          const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      console.log('Profile fetch result:', { data: profile, error });
 
-          console.log('Profile fetch result:', { data, error });
-
-          if (error) {
-            console.error('Error fetching profile (attempt', retries, '):', error);
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-            continue;
-          }
-
-          profile = data;
-        } catch (err) {
-          console.error('Query failed or timed out:', err);
-          retries--;
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
+      if (error) {
+        console.error('Error fetching profile:', error);
+        // Return a basic user object instead of null
+        const { data: { user } } = await supabase.auth.getUser();
+        return {
+          id: userId,
+          email: user?.email || '',
+          name: user?.user_metadata?.name || 'User',
+          role: 'client' as UserRole
+        };
       }
 
       if (!profile) {
-        console.error('Failed to fetch profile after all retries');
-        return null;
+        console.warn('No profile found, using default');
+        const { data: { user } } = await supabase.auth.getUser();
+        return {
+          id: userId,
+          email: user?.email || '',
+          name: user?.user_metadata?.name || 'User',
+          role: 'client' as UserRole
+        };
       }
 
       return {
@@ -111,7 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     } catch (error) {
       console.error('Exception in fetchUserProfile:', error);
-      return null;
+      // Return a basic user object instead of null
+      const { data: { user } } = await supabase.auth.getUser();
+      return {
+        id: userId,
+        email: user?.email || '',
+        name: user?.user_metadata?.name || 'User',
+        role: 'client' as UserRole
+      };
     }
   }
 
