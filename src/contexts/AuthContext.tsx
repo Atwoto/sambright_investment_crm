@@ -27,26 +27,57 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Helper function to fetch user profile
 async function fetchUserProfile(userId: string): Promise<User | null> {
   try {
-    const { data: profile, error } = await supabase
+    console.log('Fetching profile for user:', userId);
+
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+    });
+
+    const fetchPromise = supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (error || !profile) {
+    const { data: profile, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+    if (error) {
       console.error('Error fetching profile:', error);
-      return null;
+      // Return a default user profile to prevent infinite loading
+      return {
+        id: userId,
+        email: '',
+        name: 'User',
+        role: 'client' as UserRole
+      };
+    }
+
+    if (!profile) {
+      console.warn('No profile found, using default');
+      return {
+        id: userId,
+        email: '',
+        name: 'User',
+        role: 'client' as UserRole
+      };
     }
 
     return {
       id: profile.id,
       email: profile.email || '',
       name: profile.name || '',
-      role: profile.role as UserRole
+      role: (profile.role as UserRole) || 'client'
     };
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    return null;
+    // Return a default user profile instead of null to prevent infinite loading
+    return {
+      id: userId,
+      email: '',
+      name: 'User',
+      role: 'client' as UserRole
+    };
   }
 }
 
@@ -55,8 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session and fetch profile
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+
       if (session?.user) {
         const userProfile = await fetchUserProfile(session.user.id);
         setUser(userProfile);
@@ -69,6 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+
         if (session?.user) {
           const userProfile = await fetchUserProfile(session.user.id);
           setUser(userProfile);
@@ -79,7 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
