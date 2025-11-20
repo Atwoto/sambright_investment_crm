@@ -45,13 +45,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          const userProfile = await fetchUserProfile(session.user.id);
-          console.log('🎯 Setting user in initAuth:', userProfile);
-          if (mounted && userProfile) {
-            setUser(userProfile);
-            console.log('✅ User set successfully');
+          // TEMPORARY FIX: Skip database, use session data directly
+          console.log('🎯 Creating user from session data');
+          const quickUser: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
+          };
+          console.log('✅ Quick user created:', quickUser);
+          if (mounted) {
+            setUser(quickUser);
           }
           setLoading(false);
+          
+          // Try to fetch real profile in background (don't await)
+          fetchUserProfile(session.user.id).then(profile => {
+            if (mounted && profile) {
+              console.log('🔄 Updating with real profile');
+              setUser(profile);
+            }
+          }).catch(err => {
+            console.log('Background profile fetch failed, keeping quick user');
+          });
         } else {
           console.log('❌ No session found');
           setUser(null);
