@@ -45,11 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          // Fetch profile from database (RLS is now fixed)
-          const userProfile = await fetchUserProfile(session.user.id);
-          console.log('✅ User profile loaded:', userProfile);
+          // Create user from session immediately (no async calls)
+          const sessionUser: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
+          };
+          console.log('✅ User from session:', sessionUser);
           if (mounted) {
-            setUser(userProfile);
+            setUser(sessionUser);
           }
           setLoading(false);
         } else {
@@ -77,11 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           if (session?.user) {
-            // Fetch profile from database (RLS is now fixed)
-            const userProfile = await fetchUserProfile(session.user.id);
-            console.log('🎯 User from auth change:', userProfile);
+            // Create user from session immediately (no async calls)
+            const sessionUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
+            };
+            console.log('🎯 User from auth change:', sessionUser);
             if (mounted) {
-              setUser(userProfile);
+              setUser(sessionUser);
             }
             setLoading(false);
           } else {
