@@ -24,97 +24,106 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to fetch user profile
-async function fetchUserProfile(userId: string): Promise<User | null> {
-  try {
-    console.log('Fetching profile for user:', userId);
-
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    console.log('Profile fetch result:', { profile, error });
-
-    if (error) {
-      console.error('Error fetching profile:', error.message, error.details, error.hint);
-      return null;
-    }
-
-    if (!profile) {
-      console.warn('No profile found for user:', userId);
-      return null;
-    }
-
-    console.log('Profile data:', profile);
-
-    return {
-      id: profile.id,
-      email: profile.email || '',
-      name: profile.name || '',
-      role: (profile.role as UserRole) || 'client'
-    };
-  } catch (error) {
-    console.error('Exception fetching user profile:', error);
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session and fetch profile
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        let retries = 3;
-        let userProfile = null;
+    let isMounted = true;
 
-        // Retry fetching profile up to 3 times
-        while (retries > 0 && !userProfile) {
-          userProfile = await fetchUserProfile(session.user.id);
-          if (!userProfile) {
-            console.log(`Profile fetch failed, retrying... (${retries} attempts left)`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            retries--;
+    async function getInitialSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (session?.user) {
+          // Fetch user profile
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (isMounted) {
+            if (profile) {
+              setUser({
+                id: profile.id,
+                email: profile.email || session.user.email || '',
+                name: profile.name || '',
+                role: (profile.role as UserRole) || 'client'
+              });
+            } else {
+              console.warn('No profile found, creating basic user object');
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || 'User',
+                role: 'client' as UserRole
+              });
+            }
+            setLoading(false);
+          }
+        } else {
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
           }
         }
-
-        setUser(userProfile);
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        if (isMounted) {
+          setUser(null);
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    }
+
+    getInitialSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          let retries = 3;
-          let userProfile = null;
+        console.log('Auth state changed:', event);
 
-          // Retry fetching profile up to 3 times
-          while (retries > 0 && !userProfile) {
-            userProfile = await fetchUserProfile(session.user.id);
-            if (!userProfile) {
-              console.log(`Profile fetch failed, retrying... (${retries} attempts left)`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              retries--;
+        if (!isMounted) return;
+
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (isMounted) {
+            if (profile) {
+              setUser({
+                id: profile.id,
+                email: profile.email || session.user.email || '',
+                name: profile.name || '',
+                role: (profile.role as UserRole) || 'client'
+              });
+            } else {
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || 'User',
+                role: 'client' as UserRole
+              });
             }
           }
-
-          setUser(userProfile);
         } else {
-          setUser(null);
+          if (isMounted) {
+            setUser(null);
+          }
         }
-        setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

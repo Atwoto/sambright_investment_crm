@@ -163,22 +163,109 @@ export function DashboardOverview() {
         return { id: transaction.id, type, message, timestamp };
       });
 
-      setStats({
-        totalProducts: productsCount || 0,
-        totalClients: clientsCount || 0,
-        pendingOrders: ordersCount || 0,
-        monthlyRevenue,
-        lowStockItems: lowStockItems.length,
-        paintingsAvailable: paintingsCount || 0,
-        paintsInStock: paintsCount || 0,
-        recentActivity,
-      });
-    } catch (error) {
-      console.error("Error loading dashboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const loadDashboardData = async () => {
+        try {
+          setLoading(true);
+    
+          const [
+            productsCount,
+            clientsCount,
+            ordersCount,
+            paintingsCount,
+            paintsCount,
+            allProducts,
+            ordersData,
+            recentTransactions,
+          ] = await Promise.all([
+            supabase.from("products").select("*", { count: "exact", head: true }),
+            supabase.from("clients").select("*", { count: "exact", head: true }),
+            supabase.from("orders").select("*", { count: "exact", head: true }),
+            supabase
+              .from("products")
+              .select("*", { count: "exact", head: true })
+              .eq("product_type", "painting"),
+            supabase
+              .from("products")
+              .select("*", { count: "exact", head: true })
+              .eq("product_type", "paint"),
+            supabase.from("products").select("id, stock_level, min_stock_level"),
+            supabase
+              .from("orders")
+              .select("total")
+              .gte(
+                "created_at",
+                new Date(
+                  new Date().getFullYear(),
+                  new Date().getMonth(),
+                  1
+                ).toISOString()
+              ),
+            supabase
+              .from("inventory_transactions")
+              .select("*, product:products(name, product_type)")
+              .order("created_at", { ascending: false })
+              .limit(5),
+          ]);
+    
+          const lowStockItems =
+            allProducts.data?.filter(
+              (item) => item.stock_level < item.min_stock_level
+            ) || [];
+    
+          const monthlyRevenue =
+            ordersData.data?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+    
+          const recentActivity = (recentTransactions.data || []).map(
+            (transaction) => {
+              let message = "";
+              let type: "sale" | "restock" | "new_client" | "low_stock" = "restock";
+    
+              switch (transaction.type) {
+                case "stock_in":
+                  message = `Stocked in ${transaction.quantity} units of ${transaction.product?.name}`;
+                  type = "restock";
+                  break;
+                case "stock_out":
+                  message = `Sold ${transaction.quantity} units of ${transaction.product?.name}`;
+                  type = "sale";
+                  break;
+                case "damaged":
+                  message = `${transaction.quantity} units of ${transaction.product?.name} marked damaged`;
+                  type = "low_stock";
+                  break;
+                default:
+                  message = `${transaction.type} for ${transaction.product?.name}`;
+              }
+    
+              // Calculate time ago
+              const diffMs =
+                new Date().getTime() - new Date(transaction.created_at).getTime();
+              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+              const timestamp =
+                diffHours > 24
+                  ? `${Math.floor(diffHours / 24)} days ago`
+                  : `${diffHours} hours ago`;
+    
+              return { id: transaction.id, type, message, timestamp };
+            }
+          );
+    
+          setStats({
+            totalProducts: productsCount.count || 0,
+            totalClients: clientsCount.count || 0,
+            pendingOrders: ordersCount.count || 0,
+            monthlyRevenue,
+            lowStockItems: lowStockItems.length,
+            paintingsAvailable: paintingsCount.count || 0,
+            paintsInStock: paintsCount.count || 0,
+            recentActivity,
+          });
+        } catch (error) {
+          console.error("Error loading dashboard:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
 
   useEffect(() => {
     loadDashboardData();
