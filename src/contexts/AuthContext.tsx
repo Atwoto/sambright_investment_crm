@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          // TEMPORARY FIX: Skip database, use session data directly
+          // Use session data directly - no database call
           console.log('🎯 Creating user from session data');
           const quickUser: User = {
             id: session.user.id,
@@ -53,21 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
             role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
           };
-          console.log('✅ Quick user created:', quickUser);
+          console.log('✅ User created from session:', quickUser);
           if (mounted) {
             setUser(quickUser);
           }
           setLoading(false);
-          
-          // Try to fetch real profile in background (don't await)
-          fetchUserProfile(session.user.id).then(profile => {
-            if (mounted && profile) {
-              console.log('🔄 Updating with real profile');
-              setUser(profile);
-            }
-          }).catch(err => {
-            console.log('Background profile fetch failed, keeping quick user');
-          });
         } else {
           console.log('❌ No session found');
           setUser(null);
@@ -93,11 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           if (session?.user) {
-            const userProfile = await fetchUserProfile(session.user.id);
-            console.log('🎯 Setting user in auth change:', userProfile);
-            if (mounted && userProfile) {
-              setUser(userProfile);
-              console.log('✅ User set successfully in auth change');
+            // Use session data directly - no database call
+            const quickUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              role: (session.user.user_metadata?.role as UserRole) || 'super_admin'
+            };
+            console.log('🎯 User from auth change:', quickUser);
+            if (mounted) {
+              setUser(quickUser);
             }
             setLoading(false);
           } else {
