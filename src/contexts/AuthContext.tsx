@@ -1,11 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient, User as SupabaseUser } from '@supabase/supabase-js';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
-
-const supabase = createClient(
-  `https://${projectId}.supabase.co`,
-  publicAnonKey
-);
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '../utils/supabase/client';
 
 export type UserRole = 'super_admin' | 'production' | 'field' | 'customer_service' | 'client';
 
