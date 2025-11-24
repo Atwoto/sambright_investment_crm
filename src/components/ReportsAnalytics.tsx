@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../utils/supabase/client";
 import { formatCurrency } from "../utils/currency";
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 import {
   Card,
   CardContent,
@@ -83,8 +87,14 @@ interface InventoryAlert {
 }
 
 export function ReportsAnalytics() {
+  const { user } = useAuth();
+  const location = useLocation();
   const { theme } = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState("12months");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [productPerformance, setProductPerformance] = useState<
     ProductPerformance[]
@@ -490,10 +500,10 @@ export function ReportsAnalytics() {
                       axisLine={false}
                       tickLine={false}
                       dx={-10}
-                      tickFormatter={(value) => `$${value}`}
+                      tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip
-                      formatter={(value: number) => [`$${value}`, ""]}
+                      formatter={(value: number) => [formatCurrency(value), ""]}
                       contentStyle={{
                         backgroundColor: theme === "dark" ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)",
                         border: "none",
@@ -548,10 +558,10 @@ export function ReportsAnalytics() {
                       axisLine={false}
                       tickLine={false}
                       dx={-10}
-                      tickFormatter={(value) => `$${value}`}
+                      tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip
-                      formatter={(value: number) => [`$${value}`, "Total Sales"]}
+                      formatter={(value: number) => [formatCurrency(value), "Total Sales"]}
                       contentStyle={{
                         backgroundColor: theme === "dark" ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)",
                         border: "none",
@@ -585,10 +595,8 @@ export function ReportsAnalytics() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  $
-                  {salesData
-                    .reduce((sum, data) => sum + data.paintings, 0)
-                    .toLocaleString()}
+                  {formatCurrency(salesData
+                    .reduce((sum, data) => sum + data.paintings, 0))}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Paintings Revenue
@@ -596,10 +604,8 @@ export function ReportsAnalytics() {
               </div>
               <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  $
-                  {salesData
-                    .reduce((sum, data) => sum + data.paints, 0)
-                    .toLocaleString()}
+                  {formatCurrency(salesData
+                    .reduce((sum, data) => sum + data.paints, 0))}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Paints Revenue
@@ -758,10 +764,10 @@ export function ReportsAnalytics() {
                       </td>
                       <td className="p-4 text-center">{product.sold}</td>
                       <td className="p-4 text-right font-semibold">
-                        ${product.revenue.toLocaleString()}
+                        {formatCurrency(product.revenue)}
                       </td>
                       <td className="p-4 text-right text-muted-foreground">
-                        ${(product.revenue / (product.sold || 1)).toFixed(0)}
+                        {formatCurrency(product.revenue / (product.sold || 1))}
                       </td>
                     </tr>
                   ))}

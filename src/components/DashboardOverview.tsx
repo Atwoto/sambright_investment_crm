@@ -26,6 +26,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
@@ -59,6 +63,8 @@ const chartData = [
 ];
 
 export function DashboardOverview() {
+  const { user } = useAuth();
+  const location = useLocation();
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
     totalClients: 0,
@@ -69,6 +75,10 @@ export function DashboardOverview() {
     paintsInStock: 0,
     recentActivity: [],
   });
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
 
   const [loading, setLoading] = useState(true);
 
@@ -298,7 +308,7 @@ export function DashboardOverview() {
                       fontSize={12}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => `$${value}`}
+                      tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip
                       contentStyle={{

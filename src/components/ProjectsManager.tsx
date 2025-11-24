@@ -50,6 +50,9 @@ import {
 import { toast } from "sonner";
 import { formatCurrency } from "../utils/currency";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 import { cn } from "../lib/utils";
 import {
   DropdownMenu,
@@ -82,7 +85,12 @@ interface Project {
 
 export function ProjectsManager() {
   const { user } = useAuth();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Array<{ id: string; name: string }>>(
@@ -111,11 +119,16 @@ export function ProjectsManager() {
 
       if (clientsData) setClients(clientsData);
 
-      // Load projects
-      const { data: projectsData, error } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Base query for projects
+      let query = supabase.from("projects").select("*");
+
+      // If the user has the 'field' role, only show them active projects
+      if (user?.role === 'field') {
+        query = query.eq('status', 'in_progress');
+      }
+
+      // Execute the query
+      const { data: projectsData, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -591,22 +604,24 @@ export function ProjectsManager() {
               className="pl-10 glass-input border-0 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-primary/50"
             />
           </div>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-full sm:w-48 glass-input border-0 bg-white/50 dark:bg-gray-800/50">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Filter by status" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="planning">Planning</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="on_hold">On Hold</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+          {user?.role !== 'field' && (
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-full sm:w-48 glass-input border-0 bg-white/50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Filter by status" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="planning">Planning</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

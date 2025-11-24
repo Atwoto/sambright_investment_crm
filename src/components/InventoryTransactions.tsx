@@ -29,6 +29,9 @@ import {
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 import { formatCurrency } from "../utils/currency";
 import { toast } from "sonner";
 import {
@@ -82,7 +85,12 @@ interface InventoryTransaction {
 
 export function InventoryTransactions() {
   const { user } = useAuth();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [selectedType, setSelectedType] = useState("all");
   const [selectedDateRange, setSelectedDateRange] = useState("all");
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);

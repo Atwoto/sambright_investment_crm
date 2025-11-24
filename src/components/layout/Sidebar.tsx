@@ -17,6 +17,7 @@ import {
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { navPermissions } from '../../lib/permissions';
 
 interface SidebarProps {
   activeTab: string;
@@ -29,7 +30,7 @@ interface SidebarProps {
 export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, signOut }: SidebarProps) {
   const { user } = useAuth();
 
-  const baseNavItems = [
+  const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'clients', label: 'Clients', icon: Users },
@@ -39,12 +40,11 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
     { id: 'inventory', label: 'Inventory', icon: Package },
     { id: 'ai-advisor', label: 'AI Advisor', icon: Sparkles, highlight: true },
     { id: 'reports', label: 'Reports', icon: FileBarChart },
+    { id: 'users', label: 'User Management', icon: Shield, highlight: true },
   ];
 
-  // Add Users Management only for super admins
-  const navItems = user?.role === 'super_admin'
-    ? [...baseNavItems, { id: 'users', label: 'User Management', icon: Shield, highlight: true }]
-    : baseNavItems;
+  const allowedPaths = user?.role ? navPermissions[user.role] : [];
+  const navItems = allNavItems.filter(item => allowedPaths.includes(item.id));
 
   // Handle dashboard special case (both "/" and "/dashboard")
   const getItemId = (itemId: string) => {

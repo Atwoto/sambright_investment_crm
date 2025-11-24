@@ -122,11 +122,12 @@ export function UserManagement() {
     if (!selectedUser) return;
 
     try {
-      // Update profile role in profiles table
+      // Call the RPC function to update the role securely
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', selectedUser.id);
+        .rpc('update_user_role', {
+          user_id_to_update: selectedUser.id,
+          new_role: newRole
+        });
 
       if (error) {
         console.error('Error updating profile:', error);
@@ -144,7 +145,7 @@ export function UserManagement() {
       setIsEditDialogOpen(false);
       setSelectedUser(null);
       
-      alert('Role updated successfully! Note: User will see the new role after they log out and log back in.');
+      alert('Role updated successfully!');
     } catch (error) {
       console.error('Error updating user role:', error);
       alert('Failed to update role. Please try again.');

@@ -61,6 +61,10 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { formatCurrency } from "../utils/currency";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 
 interface Supplier {
   id: string;
@@ -89,8 +93,14 @@ interface Supplier {
 }
 
 export function SuppliersManager() {
+  const { user } = useAuth();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

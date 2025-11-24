@@ -65,6 +65,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 
 interface OrderItem {
   id: string;
@@ -99,8 +103,14 @@ interface Order {
 }
 
 export function OrdersManager() {
+  const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [orders, setOrders] = useState<Order[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);

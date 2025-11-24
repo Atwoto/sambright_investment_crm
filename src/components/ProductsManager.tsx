@@ -45,6 +45,9 @@ import {
 import { toast } from "sonner";
 import { formatCurrency } from "../utils/currency";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 import { cn } from "../lib/utils";
 import {
   DropdownMenu,
@@ -85,7 +88,12 @@ interface Painting {
 
 export function ProductsManager() {
   const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("paints");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [paints, setPaints] = useState<Paint[]>([]);

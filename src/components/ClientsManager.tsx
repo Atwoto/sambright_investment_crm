@@ -49,6 +49,10 @@ import {
   Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "react-router-dom";
+import { canAccess } from "../lib/permissions";
+import { AccessDenied } from "./ui/AccessDenied";
 import { cn } from "../lib/utils";
 import {
   DropdownMenu,
@@ -87,8 +91,14 @@ interface Client {
 }
 
 export function ClientsManager() {
+  const { user } = useAuth();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
+
+  if (!canAccess(user?.role, location.pathname)) {
+    return <AccessDenied />;
+  }
   const [clients, setClients] = useState<Client[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
