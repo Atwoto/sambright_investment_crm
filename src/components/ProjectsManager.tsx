@@ -105,6 +105,7 @@ export function ProjectsManager() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewImage, setViewImage] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -112,35 +113,39 @@ export function ProjectsManager() {
 
   const loadData = async () => {
     try {
-      // Load clients
-      const { data: clientsData } = await supabase
-        .from("clients")
-        .select("id, name")
-        .order("name");
+      // Run queries in parallel for better performance
+      const [clientsResponse, projectsResponse] = await Promise.all([
+        supabase
+          .from("clients")
+          .select("id, name")
+          .order("name"),
+        
+        (() => {
+          let query = supabase
+            .from("projects")
+            .select("*, color_palette, clients(name)")
+            .order("created_at", { ascending: false });
 
+          // If the user has the 'field' role, only show them active projects
+          if (user?.role === 'field') {
+            query = query.eq('status', 'in_progress');
+          }
+          return query;
+        })()
+      ]);
+
+      const { data: clientsData } = clientsResponse;
       if (clientsData) setClients(clientsData);
 
-      // Base query for projects
-      let query = supabase.from("projects").select("*, color_palette");
-
-      // If the user has the 'field' role, only show them active projects
-      if (user?.role === 'field') {
-        query = query.eq('status', 'in_progress');
-      }
-
-      // Execute the query
-      const { data: projectsData, error } = await query.order("created_at", { ascending: false });
-
+      const { data: projectsData, error } = projectsResponse;
       if (error) throw error;
 
-      const mappedProjects = (projectsData || []).map((p) => ({
+      const mappedProjects = (projectsData || []).map((p: any) => ({
         id: p.id,
         projectNumber: p.project_number,
         name: p.name,
         clientId: p.client_id,
-        clientName:
-          clientsData?.find((c) => c.id === p.client_id)?.name ||
-          "Unknown Client",
+        clientName: p.clients?.name || "Unknown Client",
         description: p.description,
         projectType: p.project_type || "painting",
         status: p.status || "planning",
@@ -348,7 +353,7 @@ export function ProjectsManager() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-3 py-2 overflow-y-auto flex-1 pr-2">
+            <div className="grid gap-y-4 gap-x-3 py-2 overflow-y-auto flex-1 pr-2">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="client" className="text-right">
                   Client *
@@ -516,7 +521,7 @@ export function ProjectsManager() {
                 />
               </div>
 
-              <div className="grid grid-cols-4 items-start gap-4">
+              <div className="grid grid-cols-4 items-start gap-4 mb-4">
                 <Label htmlFor="images" className="text-right pt-2">
                   Images (Optional)
                 </Label>
@@ -580,7 +585,7 @@ export function ProjectsManager() {
               </div>
             </div>
 
-            <DialogFooter className="flex-shrink-0 sticky bottom-0 pt-4 border-t border-white/10 mt-2">
+            <DialogFooter className="flex-shrink-0 pt-4 border-t border-white/10 mt-2 bg-background/50 backdrop-blur-md">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
               <Button
                 onClick={handleAddProject}
@@ -888,12 +893,19 @@ export function ProjectsManager() {
                     <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Project Gallery</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {selectedProject.images.map((img, idx) => (
-                        <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-white/10 group">
+                        <div 
+                          key={idx} 
+                          className="relative aspect-video rounded-lg overflow-hidden border border-white/10 group cursor-pointer"
+                          onClick={() => setViewImage(img)}
+                        >
                           <img
                             src={img}
                             alt={`Project image ${idx + 1}`}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <Eye className="text-white opacity-0 group-hover:opacity-100 h-8 w-8 drop-shadow-lg transition-opacity" />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -902,6 +914,21 @@ export function ProjectsManager() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Viewer Dialog */}
+      <Dialog open={!!viewImage} onOpenChange={(open) => !open && setViewImage(null)}>
+        <DialogContent className="max-w-5xl w-full p-0 overflow-hidden bg-transparent border-none shadow-none">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {viewImage && (
+              <img
+                src={viewImage}
+                alt="Full size view"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
