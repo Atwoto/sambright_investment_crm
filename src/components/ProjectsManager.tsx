@@ -128,44 +128,37 @@ export function ProjectsManager() {
     setError(null);
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Query timeout after 30 seconds")), 30000)
+      setTimeout(() => reject(new Error("Query timeout after 60 seconds")), 60000)
     );
 
     try {
-      // Load clients first (smaller table, faster)
-      const clientsPromise = supabase
-        .from("clients")
-        .select("id, name")
-        .order("name");
+      // Step 1: Load clients first (smaller table, faster)
+      const clientsResult = await Promise.race([
+        supabase
+          .from("clients")
+          .select("id, name")
+          .order("name"),
+        timeoutPromise
+      ]) as any;
 
-      // Build projects query with pagination
+      if (clientsResult.error) {
+        throw new Error(`Failed to load clients: ${clientsResult.error.message}`);
+      }
+
+      console.log('✅ Clients loaded:', clientsResult.data?.length || 0, 'items');
+
+      // Set clients data
+      if (clientsResult.data) {
+        setClients(clientsResult.data);
+      }
+
+      // Step 2: Load projects with pagination (SIMPLER - no JOIN initially)
       const from = (currentPage - 1) * projectsPerPage;
       const to = from + projectsPerPage - 1;
 
       let projectsQuery = supabase
         .from("projects")
-        .select(`
-          id,
-          project_number,
-          name,
-          client_id,
-          description,
-          project_type,
-          status,
-          start_date,
-          end_date,
-          estimated_budget,
-          actual_cost,
-          location,
-          notes,
-          images,
-          video_link,
-          created_at,
-          color_palette,
-          clients (
-            name
-          )
-        `, { count: 'exact' })
+        .select("id, project_number, name, client_id, description, project_type, status, start_date, end_date, estimated_budget, actual_cost, location, notes, images, video_link, created_at, color_palette", { count: 'exact' })
         .order("created_at", { ascending: false })
         .range(from, to);
 
@@ -174,56 +167,56 @@ export function ProjectsManager() {
         projectsQuery = projectsQuery.eq("status", "in_progress");
       }
 
-      // Execute both queries with timeout
-      const [clientsResult, projectsResult] = await Promise.all([
-        clientsPromise,
-        Promise.race([projectsQuery, timeoutPromise])
-      ]);
+      console.log('🔄 Loading projects (range', from, 'to', to, ')...');
+      const projectsResult = await Promise.race([
+        projectsQuery,
+        timeoutPromise
+      ]) as any;
 
-      if (clientsResult.error) {
-        throw new Error(`Failed to load clients: ${clientsResult.error.message}`);
-      }
+      console.log('✅ Projects query completed:', projectsResult);
 
       if (projectsResult.error) {
+        console.error('❌ Projects error:', projectsResult.error);
         throw new Error(`Failed to load projects: ${projectsResult.error.message}`);
       }
 
-      // Set clients data
-      if (clientsResult.data) {
-        setClients(clientsResult.data);
-      }
-
-      // Map projects data
-      const mappedProjects = (projectsResult.data || []).map((p: any) => ({
-        id: p.id,
-        projectNumber: p.project_number,
-        name: p.name,
-        clientId: p.client_id,
-        clientName: p.clients?.name || "Unknown Client",
-        description: p.description,
-        projectType: p.project_type || "painting",
-        status: p.status || "planning",
-        startDate: p.start_date,
-        endDate: p.end_date,
-        estimatedBudget: p.estimated_budget,
-        actualCost: p.actual_cost || 0,
-        location: p.location,
-        notes: p.notes,
-        images: p.images || [],
-        videoLink: p.video_link || "",
-        createdAt: p.created_at,
-        color_palette: p.color_palette || [],
-      }));
+      // Step 3: Map projects data with client names from loaded clients
+      const mappedProjects = (projectsResult.data || []).map((p: any) => {
+        const client = clientsResult.data?.find((c: any) => c.id === p.client_id);
+        return {
+          id: p.id,
+          projectNumber: p.project_number,
+          name: p.name,
+          clientId: p.client_id,
+          clientName: client?.name || "Unknown Client",
+          description: p.description,
+          projectType: p.project_type || "painting",
+          status: p.status || "planning",
+          startDate: p.start_date,
+          endDate: p.end_date,
+          estimatedBudget: p.estimated_budget,
+          actualCost: p.actual_cost || 0,
+          location: p.location,
+          notes: p.notes,
+          images: p.images || [],
+          videoLink: p.video_link || "",
+          createdAt: p.created_at,
+          color_palette: p.color_palette || [],
+        };
+      });
 
       setProjects(mappedProjects);
       setTotalProjects(projectsResult.count || 0);
 
     } catch (error: any) {
-      console.error("Error loading projects:", error);
-      setError(error.message || "Failed to load projects. Please try again.");
+      console.error("❌ Error loading projects:", error);
+      const errorMsg = error.message || "Failed to load projects. Please try again.";
+      console.error('❌ Setting error state:', errorMsg);
+      setError(errorMsg);
       setProjects([]);
       setTotalProjects(0);
     } finally {
+      console.log('✅ loadData complete, setting loading to false');
       setLoading(false);
     }
   };
@@ -702,6 +695,7 @@ export function ProjectsManager() {
           </div>
           <h3 className="text-lg font-medium text-foreground">Loading projects...</h3>
           <p className="text-muted-foreground mt-1">Please wait while we fetch your projects</p>
+          <p className="text-xs text-muted-foreground mt-2">This may take up to 60 seconds</p>
         </div>
       )}
 
