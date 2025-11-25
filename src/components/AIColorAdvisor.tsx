@@ -29,6 +29,15 @@ import { useLocation } from "react-router-dom";
 import { canAccess } from "../lib/permissions";
 import { AccessDenied } from "./ui/AccessDenied";
 import { cn } from "../lib/utils";
+import { supabase } from "../utils/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Label } from "./ui/label";
 
 interface UploadedImage {
   id: string;
@@ -44,6 +53,14 @@ interface ColorRecommendation {
   generatedImage?: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  projectNumber: string;
+  images: string[];
+  color_palette: string[];
+}
+
 export function AIColorAdvisor() {
   const { user } = useAuth();
   const location = useLocation();
@@ -57,6 +74,9 @@ export function AIColorAdvisor() {
     []
   );
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isSavingToProject, setIsSavingToProject] = useState(false);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -80,6 +100,33 @@ export function AIColorAdvisor() {
       clearInterval(intervalId);
     };
   }, [isLoading]);
+
+  // Fetch projects
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("id, name, project_number, images, color_palette");
+
+        if (error) {
+          throw error;
+        }
+
+        setProjects(data.map(p => ({
+          id: p.id,
+          name: p.name,
+          projectNumber: p.project_number,
+          images: p.images || [],
+          color_palette: p.color_palette || [],
+        })));
+      } catch (error: any) {
+        console.error("Error fetching projects:", error);
+        toast.error("Failed to load projects: " + error.message);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -115,9 +162,90 @@ export function AIColorAdvisor() {
     toast.info("All images removed");
   };
 
+  const handleSaveToProject = async (recommendation: ColorRecommendation) => {
+    if (!selectedProjectId) {
+      toast.error("No project selected.");
+      return;
+    }
+    if (!recommendation.generatedImage) {
+      toast.error("No generated image to save.");
+      return;
+    }
+
+    setIsSavingToProject(true);
+    const toastId = toast.loading("Saving image to project...");
+
+    try {
+      // Fetch current project images to append
+      const { data: currentProject, error: fetchError } = await supabase
+        .from("projects")
+        .select("images")
+        .eq("id", selectedProjectId)
+        .single();
+
+      if (fetchError || !currentProject) {
+        throw new Error(fetchError?.message || "Project not found.");
+      }
+
+      const updatedImages = [...(currentProject.images || []), recommendation.generatedImage];
+
+      const { error } = await supabase
+        .from("projects")
+        .update({ images: updatedImages })
+        .eq("id", selectedProjectId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Image saved to project successfully!", { id: toastId });
+    } catch (error: any) {
+      console.error("Error saving image to project:", error);
+      toast.error("Failed to save image to project: " + error.message, { id: toastId });
+    } finally {
+      setIsSavingToProject(false);
+    }
+  };
+
+  const handleSelectOption = async (recommendation: ColorRecommendation) => {
+    if (!selectedProjectId) {
+      toast.error("No project selected.");
+      return;
+    }
+    if (!recommendation.colors || recommendation.colors.length === 0) {
+      toast.error("No colors to select.");
+      return;
+    }
+
+    setIsSavingToProject(true);
+    const toastId = toast.loading("Selecting color palette for project...");
+
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ color_palette: recommendation.colors })
+        .eq("id", selectedProjectId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Color palette selected for project successfully!", { id: toastId });
+    } catch (error: any) {
+      console.error("Error selecting color palette for project:", error);
+      toast.error("Failed to select color palette: " + error.message, { id: toastId });
+    } finally {
+      setIsSavingToProject(false);
+    }
+  };
+
   const getAiRecommendationsAndPreviews = async () => {
     if (uploadedImages.length === 0) {
       toast.error("Please upload at least one image");
+      return;
+    }
+    if (!selectedProjectId) {
+      toast.error("Please select a project first.");
       return;
     }
 
@@ -137,7 +265,7 @@ export function AIColorAdvisor() {
       const base64Images = await Promise.all(imagePromises);
 
       const webhookUrl =
-        "https://n8n-n2hx.onrender.com/webhook/ai-color-advisor";
+        "https://standout4growth.app.n8n.cloud/webhook/ai-color-advisor";
 
       const response = await fetch(webhookUrl, {
         method: "POST",
@@ -177,6 +305,7 @@ export function AIColorAdvisor() {
     setUploadedImages([]);
     setRecommendations([]);
     setIsLoading(false);
+    // Keep selected project
   };
 
   return (
@@ -349,10 +478,45 @@ export function AIColorAdvisor() {
         </div>
       </div>
 
+      {/* Project Selection */}
+      <div className="glass-card p-6 rounded-xl space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              Select Target Project
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Choose a project to save recommendations and images to.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
+          <Label htmlFor="project-select" className="md:col-span-1 text-right md:pr-4">
+            Project:
+          </Label>
+          <Select
+            value={selectedProjectId || ""}
+            onValueChange={setSelectedProjectId}
+          >
+            <SelectTrigger id="project-select" className="col-span-3 glass-input">
+              <SelectValue placeholder="Select a project" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name} ({project.projectNumber})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="space-y-6 animate-enter" style={{ animationDelay: '200ms' }}>
         <Button
           onClick={getAiRecommendationsAndPreviews}
-          disabled={uploadedImages.length === 0 || isLoading}
+          disabled={uploadedImages.length === 0 || isLoading || !selectedProjectId}
           className={cn(
             "w-full h-auto py-8 text-lg font-semibold shadow-lg transition-all duration-300",
             "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white",
@@ -472,13 +636,22 @@ export function AIColorAdvisor() {
                     </div>
 
                     <div className="flex gap-4 pt-4">
-                      <Button className="flex-1 glass-button">
+                      <Button
+                        className="flex-1 glass-button"
+                        onClick={() => handleSelectOption(rec)}
+                        disabled={isSavingToProject}
+                      >
                         <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Select This Option
+                        {isSavingToProject ? "Saving..." : "Select This Option"}
                       </Button>
-                      <Button variant="outline" className="glass-button">
+                      <Button
+                        variant="outline"
+                        className="glass-button"
+                        onClick={() => handleSaveToProject(rec)}
+                        disabled={isSavingToProject}
+                      >
                         <ArrowRight className="h-4 w-4 mr-2" />
-                        Save to Project
+                        {isSavingToProject ? "Saving..." : "Save to Project"}
                       </Button>
                     </div>
                   </div>

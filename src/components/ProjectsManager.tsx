@@ -81,6 +81,7 @@ interface Project {
   images?: string[];
   videoLink?: string;
   createdAt: string;
+  color_palette?: string[];
 }
 
 export function ProjectsManager() {
@@ -120,7 +121,7 @@ export function ProjectsManager() {
       if (clientsData) setClients(clientsData);
 
       // Base query for projects
-      let query = supabase.from("projects").select("*");
+      let query = supabase.from("projects").select("*, color_palette");
 
       // If the user has the 'field' role, only show them active projects
       if (user?.role === 'field') {
@@ -152,6 +153,7 @@ export function ProjectsManager() {
         images: p.images || [],
         videoLink: p.video_link || "",
         createdAt: p.created_at,
+        color_palette: p.color_palette || [],
       }));
 
       setProjects(mappedProjects);
@@ -855,6 +857,28 @@ export function ProjectsManager() {
                     <p className="text-sm leading-relaxed text-muted-foreground italic">
                       {selectedProject.notes}
                     </p>
+                  </div>
+                )}
+
+                {/* Color Palette */}
+                {selectedProject.color_palette && selectedProject.color_palette.length > 0 && (
+                  <div className="glass-card p-6 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider text-muted-foreground">Selected Color Palette</h4>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedProject.color_palette.map((color, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="pl-8 pr-4 py-2 text-sm bg-background/50 backdrop-blur-sm border-border/50"
+                        >
+                          <div
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-black/10 shadow-sm"
+                            style={{ backgroundColor: color.toLowerCase() }}
+                          />
+                          {color}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
