@@ -1,6 +1,5 @@
--- Fix RLS Policies Only (No ALTER SYSTEM - remove this from transaction)
+-- Fix RLS Policies Only (No Indexes - they already exist!)
 -- Run this in your Supabase SQL Editor
--- NOTE: statement_timeout should be set via Supabase Dashboard > Settings > Database
 
 -- ==============================================
 -- PART 1: Fix Circular Dependencies in RLS
@@ -300,6 +299,10 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 -- PART 5: Optimize Query Performance
 -- ==============================================
 
+-- Set a timeout for queries (in milliseconds)
+-- This prevents runaway queries from hanging the application
+ALTER SYSTEM SET statement_timeout = '30s';
+
 -- ANALYZE tables to update statistics for query planner
 ANALYZE public.projects;
 ANALYZE public.clients;
@@ -311,10 +314,3 @@ ANALYZE public.profiles;
 
 -- Success message
 SELECT 'RLS policies fixed successfully! Indexes already exist.' as status;
-
--- ==============================================
--- IMPORTANT: Set Statement Timeout (Do this manually!)
--- ==============================================
--- Go to Supabase Dashboard > Settings > Database > Configuration
--- Add: statement_timeout = '30s'
--- This cannot be set via SQL in a transaction block

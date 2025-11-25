@@ -88,6 +88,8 @@ export function ProjectsManager() {
   const { user } = useAuth();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   if (!canAccess(user?.role, location.pathname)) {
     return <AccessDenied />;
@@ -107,40 +109,92 @@ export function ProjectsManager() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewImage, setViewImage] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const projectsPerPage = 12;
+
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    try {
-      // Run queries in parallel for better performance
-      const [clientsResponse, projectsResponse] = await Promise.all([
-        supabase
-          .from("clients")
-          .select("id, name")
-          .order("name"),
-        
-        (() => {
-          let query = supabase
-            .from("projects")
-            .select("*, color_palette, clients(name)")
-            .order("created_at", { ascending: false });
+  useEffect(() => {
+    // Reset to first page when search or filter changes
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus]);
 
-          // If the user has the 'field' role, only show them active projects
-          if (user?.role === 'field') {
-            query = query.eq('status', 'in_progress');
-          }
-          return query;
-        })()
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Query timeout after 15 seconds")), 15000)
+    );
+
+    try {
+      // Load clients first (smaller table, faster)
+      const clientsPromise = supabase
+        .from("clients")
+        .select("id, name")
+        .order("name");
+
+      // Build projects query with pagination
+      const from = (currentPage - 1) * projectsPerPage;
+      const to = from + projectsPerPage - 1;
+
+      let projectsQuery = supabase
+        .from("projects")
+        .select(`
+          id,
+          project_number,
+          name,
+          client_id,
+          description,
+          project_type,
+          status,
+          start_date,
+          end_date,
+          estimated_budget,
+          actual_cost,
+          location,
+          notes,
+          images,
+          video_link,
+          created_at,
+          color_palette,
+          clients (
+            name
+          )
+        `, { count: 'exact' })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      // Filter by status for field users
+      if (user?.role === "field") {
+        projectsQuery = projectsQuery.eq("status", "in_progress");
+      }
+
+      // Execute both queries with timeout
+      const [clientsResult, projectsResult] = await Promise.all([
+        clientsPromise,
+        Promise.race([projectsQuery, timeoutPromise])
       ]);
 
-      const { data: clientsData } = clientsResponse;
-      if (clientsData) setClients(clientsData);
+      if (clientsResult.error) {
+        throw new Error(`Failed to load clients: ${clientsResult.error.message}`);
+      }
 
-      const { data: projectsData, error } = projectsResponse;
-      if (error) throw error;
+      if (projectsResult.error) {
+        throw new Error(`Failed to load projects: ${projectsResult.error.message}`);
+      }
 
-      const mappedProjects = (projectsData || []).map((p: any) => ({
+      // Set clients data
+      if (clientsResult.data) {
+        setClients(clientsResult.data);
+      }
+
+      // Map projects data
+      const mappedProjects = (projectsResult.data || []).map((p: any) => ({
         id: p.id,
         projectNumber: p.project_number,
         name: p.name,
@@ -162,10 +216,15 @@ export function ProjectsManager() {
       }));
 
       setProjects(mappedProjects);
-    } catch (error) {
+      setTotalProjects(projectsResult.count || 0);
+
+    } catch (error: any) {
       console.error("Error loading projects:", error);
-      toast.error("Failed to load projects");
+      setError(error.message || "Failed to load projects. Please try again.");
       setProjects([]);
+      setTotalProjects(0);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -268,6 +327,8 @@ export function ProjectsManager() {
       setIsAddDialogOpen(false);
       setNewProject({});
       setSelectedFiles([]);
+      // Reload data from first page to show the new project
+      setCurrentPage(1);
       loadData();
     } catch (error: any) {
       console.error("Full error creating project:", error);
@@ -293,6 +354,7 @@ export function ProjectsManager() {
       if (error) throw error;
 
       toast.success("Project deleted successfully", { id: toastId });
+      // Reload data to refresh the list
       loadData();
     } catch (error) {
       console.error("Error deleting project:", error);
@@ -367,7 +429,7 @@ export function ProjectsManager() {
                   <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -405,7 +467,7 @@ export function ProjectsManager() {
                   <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     <SelectItem value="painting">Painting</SelectItem>
                     <SelectItem value="renovation">Renovation</SelectItem>
                     <SelectItem value="consultation">Consultation</SelectItem>
@@ -428,7 +490,7 @@ export function ProjectsManager() {
                   <SelectTrigger className="col-span-3 glass-input">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     <SelectItem value="planning">Planning</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
@@ -619,7 +681,7 @@ export function ProjectsManager() {
                   <SelectValue placeholder="Filter by status" />
                 </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="planning">Planning</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -632,8 +694,35 @@ export function ProjectsManager() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="glass-card p-12 text-center rounded-xl animate-in fade-in-50">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">Loading projects...</h3>
+          <p className="text-muted-foreground mt-1">Please wait while we fetch your projects</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="glass-card p-12 text-center rounded-xl animate-in fade-in-50 border-red-200 dark:border-red-800">
+          <div className="mx-auto h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-4">
+            <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">Error Loading Projects</h3>
+          <p className="text-muted-foreground mt-1 max-w-sm mx-auto">{error}</p>
+          <Button onClick={() => loadData()} className="mt-4 bg-primary text-white">
+            Try Again
+          </Button>
+        </div>
+      )}
+
       {/* Projects Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter" style={{ animationDelay: '200ms' }}>
+      {!loading && !error && (
+        <div className="space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-enter" style={{ animationDelay: '200ms' }}>
         {filteredProjects.map((project, index) => (
           <div
             key={project.id}
@@ -758,6 +847,46 @@ export function ProjectsManager() {
             <Plus className="h-4 w-4 mr-2" />
             Create Project
           </Button>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && totalProjects > projectsPerPage && (
+        <div className="flex items-center justify-between glass-card p-4 rounded-xl">
+          <div className="text-sm text-muted-foreground">
+            Showing {Math.min((currentPage - 1) * projectsPerPage + 1, totalProjects)} to {Math.min(currentPage * projectsPerPage, totalProjects)} of {totalProjects} projects
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCurrentPage(prev => Math.max(prev - 1, 1));
+                loadData();
+              }}
+              disabled={currentPage === 1}
+              className="glass-input"
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {Math.ceil(totalProjects / projectsPerPage)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCurrentPage(prev => prev + 1);
+                loadData();
+              }}
+              disabled={currentPage >= Math.ceil(totalProjects / projectsPerPage)}
+              className="glass-input"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
         </div>
       )}
 

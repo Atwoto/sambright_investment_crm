@@ -1,6 +1,5 @@
--- Fix RLS Policies Only (No ALTER SYSTEM - remove this from transaction)
+-- Fix RLS Policies and Add Indexes for Projects Performance
 -- Run this in your Supabase SQL Editor
--- NOTE: statement_timeout should be set via Supabase Dashboard > Settings > Database
 
 -- ==============================================
 -- PART 1: Fix Circular Dependencies in RLS
@@ -271,7 +270,42 @@ CREATE POLICY "inventory_transactions_insert_staff" ON public.inventory_transact
   );
 
 -- ==============================================
--- PART 4: Grant Permissions
+-- PART 4: Add Indexes for Performance
+-- ==============================================
+
+-- Projects indexes
+CREATE INDEX IF NOT EXISTS idx_projects_client_id ON public.projects(client_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON public.projects(status);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON public.projects(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_name ON public.projects(name);
+
+-- Clients indexes
+CREATE INDEX IF NOT EXISTS idx_clients_name ON public.clients(name);
+CREATE INDEX IF NOT EXISTS idx_clients_email ON public.clients(email);
+
+-- Orders indexes
+CREATE INDEX IF NOT EXISTS idx_orders_client_id ON public.orders(client_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_order_number ON public.orders(order_number);
+
+-- Products indexes
+CREATE INDEX IF NOT EXISTS idx_products_sku ON public.products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
+CREATE INDEX IF NOT EXISTS idx_products_type ON public.products(type);
+CREATE INDEX IF NOT EXISTS idx_products_status ON public.products(status);
+CREATE INDEX IF NOT EXISTS idx_products_stock_quantity ON public.products(stock_quantity);
+
+-- Suppliers indexes
+CREATE INDEX IF NOT EXISTS idx_suppliers_company_name ON public.suppliers(company_name);
+
+-- Inventory transactions indexes
+CREATE INDEX IF NOT EXISTS idx_inventory_transactions_product_id ON public.inventory_transactions(product_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_transactions_type ON public.inventory_transactions(type);
+CREATE INDEX IF NOT EXISTS idx_inventory_transactions_created_at ON public.inventory_transactions(created_at DESC);
+
+-- ==============================================
+-- PART 5: Grant Permissions
 -- ==============================================
 
 -- Grant necessary permissions to authenticated role
@@ -297,8 +331,12 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
 -- ==============================================
--- PART 5: Optimize Query Performance
+-- PART 6: Optimize Query Performance
 -- ==============================================
+
+-- Set a timeout for queries (in milliseconds)
+-- This prevents runaway queries from hanging the application
+ALTER SYSTEM SET statement_timeout = '30s';
 
 -- ANALYZE tables to update statistics for query planner
 ANALYZE public.projects;
@@ -310,11 +348,4 @@ ANALYZE public.inventory_transactions;
 ANALYZE public.profiles;
 
 -- Success message
-SELECT 'RLS policies fixed successfully! Indexes already exist.' as status;
-
--- ==============================================
--- IMPORTANT: Set Statement Timeout (Do this manually!)
--- ==============================================
--- Go to Supabase Dashboard > Settings > Database > Configuration
--- Add: statement_timeout = '30s'
--- This cannot be set via SQL in a transaction block
+SELECT 'RLS policies fixed and indexes added successfully!' as status;
