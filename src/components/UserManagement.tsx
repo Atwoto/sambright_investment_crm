@@ -251,7 +251,7 @@ export function UserManagement() {
           filteredUsers.map((user, index) => (
             <Card
               key={user.id}
-              className="glass-card hover:shadow-lg transition-all duration-300 animate-enter"
+              className="glass-card border border-gray-200 light:border-gray-200 hover:shadow-lg transition-all duration-300 animate-enter"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <CardContent className="p-6">
@@ -287,15 +287,15 @@ export function UserManagement() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                      <DropdownMenuContent align="end" side="bottom" sideOffset={5} className="bg-background border border-border shadow-lg z-[100]">
+                        <DropdownMenuItem onClick={() => handleEditUser(user)} className="cursor-pointer">
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Role
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 focus:text-red-600"
+                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete User
@@ -312,7 +312,7 @@ export function UserManagement() {
 
       {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="overflow-visible">
           <DialogHeader>
             <DialogTitle>Edit User Role</DialogTitle>
             <DialogDescription>
@@ -347,12 +347,12 @@ export function UserManagement() {
               <div className="space-y-2">
                 <Label>New Role</Label>
                 <Select value={newRole} onValueChange={(value: User['role']) => setNewRole(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent side="bottom" sideOffset={5} collisionPadding={60} className="bg-background border border-border shadow-lg z-[100]">
                     {Object.entries(roleLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
+                      <SelectItem key={value} value={value} className="cursor-pointer">
                         <div className="flex items-center gap-2">
                           <span>{label}</span>
                         </div>

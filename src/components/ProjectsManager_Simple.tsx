@@ -291,7 +291,7 @@ export function ProjectsManager_Simple() {
           {filteredProjects.map((project, index) => (
             <div
               key={project.id}
-              className="group glass-card rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 cursor-pointer animate-enter"
+              className="group glass-card border border-gray-200 dark:border-transparent rounded-xl p-0 overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 cursor-pointer animate-enter"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div className="p-6 space-y-5">

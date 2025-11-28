@@ -57,9 +57,9 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
   return (
     <aside
       className={`
-        relative h-screen transition-all duration-300 ease-in-out border-r border-white/20 dark:border-gray-700/30
+        relative h-screen transition-all duration-300 ease-in-out bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700
         ${isCollapsed ? 'w-20' : 'w-72'}
-        glass-panel flex flex-col z-50
+        flex flex-col z-50
       `}
     >
       {/* Logo Section */}
@@ -86,8 +86,8 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
               className={`
                 w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden cursor-pointer
                 ${isActive
-                  ? 'bg-primary/15 text-primary shadow-lg shadow-primary/10 border border-primary/20'
-                  : 'hover:bg-white/60 dark:hover:bg-gray-800/60 text-muted-foreground hover:text-foreground hover:shadow-md'
+                  ? 'bg-blue-50 dark:bg-primary/15 text-blue-700 dark:text-primary shadow-lg shadow-primary/10 border border-primary/20'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-800/60 text-muted-foreground hover:text-foreground hover:shadow-md'
                 }
                 ${item.highlight && !isActive ? 'border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5 text-primary dark:text-primary font-semibold' : ''}
               `}
@@ -100,7 +100,7 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
               <div className={`
                 p-2 rounded-lg transition-all duration-300
                 ${isActive
-                  ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105'
+                  ? 'bg-primary text-white dark:bg-primary shadow-lg shadow-primary/30 scale-105'
                   : 'bg-gray-100/50 dark:bg-gray-800/50 group-hover:bg-gray-200/70 dark:group-hover:bg-gray-700/70 group-hover:scale-105'
                 }
               `}>
@@ -134,7 +134,7 @@ export function Sidebar({ activeTab, navigate, isCollapsed, toggleCollapse, sign
         <button
           onClick={signOut}
           className={`
-            w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors
+            w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer
             ${isCollapsed ? 'justify-center' : ''}
           `}
         >

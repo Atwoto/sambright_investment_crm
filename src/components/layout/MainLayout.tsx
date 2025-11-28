@@ -19,7 +19,7 @@ export function MainLayout({ children, activeTab, navigate }: MainLayoutProps) {
   const routerNavigate = navigate || useNavigate();
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-screen w-full bg-gray-50 dark:bg-slate-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -36,7 +36,7 @@ export function MainLayout({ children, activeTab, navigate }: MainLayoutProps) {
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
-        <header className="h-16 px-8 flex items-center justify-between z-10 backdrop-blur-sm border-b border-white/10 dark:border-gray-700/30">
+        <header className="h-16 px-8 flex items-center justify-between z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-slate-700/30">
           {/* Search Bar */}
           <div className="flex-1 max-w-xl relative">
             <div className="relative group">
